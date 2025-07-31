@@ -1,13 +1,13 @@
 credentials:
   usernames:
     canberkaslan: # Bu kullanıcı adıdır
-      email: canberklarslan@gmail.com
+      email: canberkarslan@uniqstore.com.tr
       name: Canberk Arslan # Bu görünecek isimdir
-      password: 'Uniq2025.' # generate_keys.py ile oluşturulan hash'lenmiş şifre
+      password: '$2b$12$a63nUVspL4XrS57lF5KrMuSWgelhjKOPYI7xp7Kc1H/2enT52irDS' # generate_keys.py ile oluşturulan hash'lenmiş şifre
     ikinci_kullanici:
       email: canbakirtel@uniqstore.com.tr
       name: Can Bakırtel
-      password: 'Uniq2025.' # Başka bir hash'lenmiş şifre
+      password: '$2b$12$a63nUVspL4XrS57lF5KrMuSWgelhjKOPYI7xp7Kc1H/2enT52irDS' # Başka bir hash'lenmiş şifre
 cookie:
   expiry_days: 999
   key: 'some_random_signature_key' # Rastgele bir anahtar girin
