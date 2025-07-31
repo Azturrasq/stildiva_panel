@@ -12,6 +12,3 @@ cookie:
   expiry_days: 30
   key: 'some_random_signature_key' # Rastgele bir anahtar girin
   name: some_cookie_name
-preauthorized:
-  emails:
-  - user@example.com
