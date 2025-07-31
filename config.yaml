@@ -1,0 +1,17 @@
+credentials:
+  usernames:
+    canberkaslan: # Bu kullanıcı adıdır
+      email: canberk.aslan@example.com
+      name: Canberk Aslan # Bu görünecek isimdir
+      password: '$2b$12$xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx' # generate_keys.py ile oluşturulan hash'lenmiş şifre
+    ikinci_kullanici:
+      email: user2@example.com
+      name: İkinci Kullanıcı
+      password: '$2b$12$yyyyyyyyyyyyyyyyyyyyyyyyyyyyyy' # Başka bir hash'lenmiş şifre
+cookie:
+  expiry_days: 30
+  key: 'some_random_signature_key' # Rastgele bir anahtar girin
+  name: some_cookie_name
+preauthorized:
+  emails:
+  - user@example.com

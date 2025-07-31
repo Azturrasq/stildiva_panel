@@ -1,0 +1,8 @@
+streamlit
+streamlit-authenticator
+pandas
+openpyxl
+gspread
+gspread-dataframe
+oauth2client
+PyYAML

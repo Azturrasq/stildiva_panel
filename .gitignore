@@ -1,0 +1,12 @@
+# filepath: /Users/canberkaslan/Desktop/KarlilikProjesi/.gitignore
+# Sanal ortam klasörü
+venv/
+
+# Python cache
+__pycache__/
+
+# Google Cloud kimlik bilgileri (ÇOK ÖNEMLİ)
+*.json
+
+# Yerel Excel dosyaları
+*.xlsx
