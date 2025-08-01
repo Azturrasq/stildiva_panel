@@ -13,11 +13,21 @@ from gspread_dataframe import get_as_dataframe, set_with_dataframe
 from google.oauth2.service_account import Credentials
 import gspread
 
-# --- Temizlenmiş Yardımcı Fonksiyon ---
-def get_resource_path(relative_path):
-    """ Proje ana dizinindeki bir dosyanın tam yolunu döndürür. """
-    base_path = os.path.abspath(".")
-    return os.path.join(base_path, relative_path)
+# --- SİLİNDİ: Benim eklediğim tüm karmaşık ve hatalı fonksiyonlar kaldırıldı ---
+
+# --- YENİ: SADECE WEB İÇİN KİMLİK DOĞRULAMA ---
+def get_google_creds():
+    """SADECE Streamlit Cloud için kimlik doğrulaması yapar."""
+    try:
+        creds_dict = st.secrets["gcp_service_account"]
+        scopes = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
+        sa = Credentials.from_service_account_info(creds_dict, scopes=scopes)
+        gc = gspread.authorize(sa)
+        return gc
+    except Exception:
+        st.error("KRİTİK HATA: Streamlit Cloud 'Secrets' ayarları okunamadı veya geçersiz.")
+        st.error("Lütfen 'gcp_service_account' secret'ının doğru yapılandırıldığından emin olun.")
+        st.stop()
 
 # --------------------------------------------------------------------------------
 # Sayfa Yapılandırması ve Başlangıç Ayarları
@@ -94,16 +104,8 @@ def inject_custom_css():
 def load_cost_data_from_gsheets():
     if 'df_maliyet' not in st.session_state:
         try:
-            # --- KESİN ÇÖZÜM: st.secrets yerine dosyayı manuel oku ---
-            # st.secrets mekanizması paketlenmiş uygulamalarda çalışmıyor.
-            # Bu yüzden secrets.json dosyasını kendimiz okuyoruz.
-            secrets_path = get_resource_path('secrets.json')
-            with open(secrets_path) as f:
-                creds_dict = json.load(f)
-            
-            scopes = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
-            sa = Credentials.from_service_account_info(creds_dict, scopes=scopes)
-            gc = gspread.authorize(sa)
+            # --- DÜZELTİLDİ: Sadece web'de çalışan basit fonksiyon çağrısı ---
+            gc = get_google_creds()
             
             spreadsheet_name = "maliyet_referans"
             worksheet_name = "Sayfa1"
@@ -419,14 +421,8 @@ def render_maliyet_yonetimi():
         # Buton artık Google Sheets'e kaydedecek
         if st.button("💾 Değişiklikleri Google Sheets'e Kaydet"):
             try:
-                # --- GÜNCELLENDİ: Veri okumayla aynı, doğru kimlik doğrulama yöntemi kullanılıyor ---
-                secrets_path = get_resource_path('secrets.json')
-                with open(secrets_path) as f:
-                    creds_dict = json.load(f)
-                
-                scopes = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
-                sa = Credentials.from_service_account_info(creds_dict, scopes=scopes)
-                gc = gspread.authorize(sa)
+                # --- GÜNCELLENDİ: Tüm karmaşık blok yerine tek fonksiyon çağrısı ---
+                gc = get_google_creds()
                 
                 # Doğru dosyayı ve sayfayı aç
                 workbook = gc.open("maliyet_referans")
@@ -580,8 +576,8 @@ def render_toptan_fiyat_teklifi():
             st.markdown('</div>', unsafe_allow_html=True)
 
 # --- KULLANICI GİRİŞİ ---
-# config.yaml dosyasından kimlik bilgilerini oku
-with open(get_resource_path('config.yaml')) as file: # GÜNCELLENDİ
+# config.yaml dosyasını oku (Streamlit Cloud'da kök dizinde olmalı)
+with open('config.yaml') as file:
     config = yaml.load(file, Loader=SafeLoader)
 
 # Kimlik doğrulayıcıyı oluştur
