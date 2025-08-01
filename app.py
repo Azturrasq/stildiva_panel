@@ -510,20 +510,23 @@ def render_toptan_fiyat_teklifi():
             st.markdown('</div>', unsafe_allow_html=True)
 
 # --- KULLANICI GİRİŞİ ---
+# config.yaml dosyasından kimlik bilgilerini oku
 with open('config.yaml') as file:
     config = yaml.load(file, Loader=SafeLoader)
 
+# Kimlik doğrulayıcıyı oluştur
 authenticator = stauth.Authenticate(
     config['credentials'],
     config['cookie']['name'],
     config['cookie']['key'],
-    config['cookie']['expiry_days']
+    config['cookie']['expiry_days'],
+    config['preauthorized']
 )
 
-# --- YENİ VE DOĞRU GİRİŞ MANTIĞI (v0.2.1 için) ---
-# 'login' fonksiyonu, formun adını ve konumunu argüman olarak alır.
-# Geriye kullanıcı adı, doğrulama durumu ve kullanıcı adını döndürür.
-name, authentication_status, username = authenticator.login('Login', 'main')
+# --- GÜNCELLENDİ: Login fonksiyon çağrısı ---
+# 'Login' başlığı kaldırıldı, sadece konum belirtildi.
+name, authentication_status, username = authenticator.login(location='main')
+
 
 if authentication_status:
     # --- ANA UYGULAMA AKIŞI ---
