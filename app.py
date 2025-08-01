@@ -498,21 +498,32 @@ def render_satis_fiyati_hesaplayici():
         df_maliyet = load_cost_data()
         arama_terimi = st.text_input("Model Kodu ile Ürün Ara", "")
         secilen_urun_detay = None
+
         if arama_terimi:
-            # --- GÜNCELLENDİ: Arama yapmadan önce veri tipi string'e çevriliyor. ---
-            # Bu, sütun sayısal olsa bile .str fonksiyonlarının çalışmasını garantiler.
+            # --- GÜNCELLENDİ: Önce 'içerir' mantığıyla ara, sonra seçim yaptır ---
             df_maliyet['Model Kodu'] = df_maliyet['Model Kodu'].astype(str)
-            
-            temiz_arama_terimi = arama_terimi.strip().lower()
-            sonuclar = df_maliyet[df_maliyet['Model Kodu'].str.strip().str.lower() == temiz_arama_terimi]
+            sonuclar = df_maliyet[df_maliyet['Model Kodu'].str.contains(arama_terimi, case=False, na=False)]
             
             if not sonuclar.empty:
-                secilen_urun_detay = sonuclar.iloc[0]
-        
+                # Bulunan modelleri kullanıcıya selectbox ile sun
+                secenekler = sonuclar['Model Kodu'].unique()
+                secilen_model_kodu = st.selectbox(
+                    "Bulunan Modeller", 
+                    options=secenekler,
+                    index=None, # Başlangıçta boş olsun
+                    placeholder="Lütfen bir model seçin..."
+                )
+                
+                # Kullanıcı bir model seçtiyse, o modelin detaylarını al
+                if secilen_model_kodu:
+                    secilen_urun_detay = sonuclar[sonuclar['Model Kodu'] == secilen_model_kodu].iloc[0]
+            else:
+                st.warning("Aradığınız kriterlere uygun ürün bulunamadı.")
+
         if secilen_urun_detay is not None:
             urun = secilen_urun_detay
-            st.success(f"**Seçilen Ürün:** {urun['Model Kodu']} | **Alış Fiyatı (KDV Hariç):** {urun['Alış Fiyatı']:,.2f} TL")
-            satis_fiyati_kdvli = st.number_input("Satış Fiyatı (KDV Dahil)", min_value=0.0, format="%.2f", key="satis_fiyati_input")
+            # Seçim yapıldığını göstermek için artık st.success kullanmıyoruz, hesaplama alanı direkt görünecek.
+            satis_fiyati_kdvli = st.number_input(f"Satış Fiyatı (KDV Dahil) - Seçilen: {urun['Model Kodu']}", min_value=0.0, format="%.2f", key="satis_fiyati_input")
             if st.button("Hesapla", type="primary"):
                 if satis_fiyati_kdvli > 0:
                     kdv_bolen, kdv_carpan = 1 + (st.session_state.tekil_kdv / 100), st.session_state.tekil_kdv / 100
