@@ -6,22 +6,17 @@ from yaml.loader import SafeLoader
 import streamlit_authenticator as stauth
 import io
 import os
-import sys
+import json
 from datetime import datetime
 import calendar
 from gspread_dataframe import get_as_dataframe, set_with_dataframe
 from google.oauth2.service_account import Credentials
 import gspread
 
-# --- YENİ: Paket içinde dosya yolunu bulan yardımcı fonksiyon ---
+# --- Temizlenmiş Yardımcı Fonksiyon ---
 def get_resource_path(relative_path):
-    """ Paketlendiğinde veya normal çalıştırıldığında doğru dosya yolunu döndürür. """
-    try:
-        # PyInstaller geçici bir _MEIPASS klasörü oluşturur
-        base_path = sys._MEIPASS
-    except Exception:
-        # Normal Python ile çalıştırılıyorsa
-        base_path = os.path.abspath(".")
+    """ Proje ana dizinindeki bir dosyanın tam yolunu döndürür. """
+    base_path = os.path.abspath(".")
     return os.path.join(base_path, relative_path)
 
 # --------------------------------------------------------------------------------
@@ -99,12 +94,17 @@ def inject_custom_css():
 def load_cost_data_from_gsheets():
     if 'df_maliyet' not in st.session_state:
         try:
-            creds = st.secrets["gcp_service_account"]
+            # --- KESİN ÇÖZÜM: st.secrets yerine dosyayı manuel oku ---
+            # st.secrets mekanizması paketlenmiş uygulamalarda çalışmıyor.
+            # Bu yüzden secrets.json dosyasını kendimiz okuyoruz.
+            secrets_path = get_resource_path('secrets.json')
+            with open(secrets_path) as f:
+                creds_dict = json.load(f)
+            
             scopes = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
-            sa = Credentials.from_service_account_info(creds, scopes=scopes)
+            sa = Credentials.from_service_account_info(creds_dict, scopes=scopes)
             gc = gspread.authorize(sa)
             
-            # --- GÜNCELLENDİ: Doğru dosya adı kullanılıyor ---
             spreadsheet_name = "maliyet_referans"
             worksheet_name = "Sayfa1"
             
@@ -115,6 +115,9 @@ def load_cost_data_from_gsheets():
             st.session_state.df_maliyet = df
             st.success("Maliyet verileri Google Sheets'ten başarıyla yüklendi!")
 
+        except FileNotFoundError:
+            st.error("KRİTİK HATA: 'secrets.json' dosyası bulunamadı. Lütfen dosyanın proje klasöründe olduğundan emin olun.")
+            st.stop()
         except gspread.exceptions.SpreadsheetNotFound:
             st.error(f"KRİTİK HATA: '{spreadsheet_name}' adında bir Google E-Tablosu bulunamadı.")
             st.warning("Lütfen dosya adının tam olarak doğru olduğundan ve hizmet hesabına paylaşım izni verdiğinizden emin olun.")
@@ -416,10 +419,13 @@ def render_maliyet_yonetimi():
         # Buton artık Google Sheets'e kaydedecek
         if st.button("💾 Değişiklikleri Google Sheets'e Kaydet"):
             try:
-                # Google Sheets'e bağlan
-                creds = st.secrets["gcp_service_account"]
+                # --- GÜNCELLENDİ: Veri okumayla aynı, doğru kimlik doğrulama yöntemi kullanılıyor ---
+                secrets_path = get_resource_path('secrets.json')
+                with open(secrets_path) as f:
+                    creds_dict = json.load(f)
+                
                 scopes = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
-                sa = Credentials.from_service_account_info(creds, scopes=scopes)
+                sa = Credentials.from_service_account_info(creds_dict, scopes=scopes)
                 gc = gspread.authorize(sa)
                 
                 # Doğru dosyayı ve sayfayı aç
