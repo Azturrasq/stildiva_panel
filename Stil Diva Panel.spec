@@ -1,7 +1,7 @@
 # -*- mode: python ; coding: utf-8 -*-
 from PyInstaller.utils.hooks import collect_data_files
 
-datas = [('app.py', '.'), ('config.yaml', '.'), ('logo.png', '.')]
+datas = [('app.py', '.'), ('config.yaml', '.'), ('logo.png', '.'), ('secrets.json', '.')]
 datas += collect_data_files('gspread')
 datas += collect_data_files('streamlit')
 
