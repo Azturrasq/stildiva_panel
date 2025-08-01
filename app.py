@@ -499,13 +499,14 @@ def render_satis_fiyati_hesaplayici():
         arama_terimi = st.text_input("Model Kodu ile Ürün Ara", "")
         secilen_urun_detay = None
         if arama_terimi:
-            # --- GÜNCELLENDİ: Arama mantığı 'contains' yerine tam eşleşme (==) olarak değiştirildi. ---
-            # Arama terimi ve veri setindeki model kodları küçük harfe çevrilip boşlukları temizlenerek karşılaştırılıyor.
+            # --- GÜNCELLENDİ: Arama yapmadan önce veri tipi string'e çevriliyor. ---
+            # Bu, sütun sayısal olsa bile .str fonksiyonlarının çalışmasını garantiler.
+            df_maliyet['Model Kodu'] = df_maliyet['Model Kodu'].astype(str)
+            
             temiz_arama_terimi = arama_terimi.strip().lower()
             sonuclar = df_maliyet[df_maliyet['Model Kodu'].str.strip().str.lower() == temiz_arama_terimi]
             
             if not sonuclar.empty:
-                # Tam eşleşme olduğu için artık selectbox'a gerek yok, doğrudan ilk sonucu alıyoruz.
                 secilen_urun_detay = sonuclar.iloc[0]
         
         if secilen_urun_detay is not None:
