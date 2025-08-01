@@ -1,9 +1,10 @@
 streamlit
-streamlit-authenticator
 pandas
-gspread
+plotly
+PyYAML
+streamlit-authenticator
 gspread-dataframe
 google-auth-oauthlib
-pyyaml
-plotly
+gspread
 python-calamine
+openpyxl
