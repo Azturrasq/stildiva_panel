@@ -1,7 +1,7 @@
 import streamlit_authenticator as stauth
 
 # Hash'lenecek şifrelerinizi bu listeye yazın
-passwords_to_hash = ['Uniq2025.', 'IkinciSifre'] 
+passwords_to_hash = ['Uniq2025.'] 
 
 # Bu sürüm için doğru kullanım:
 # 1. Parola listesini Hasher'a verin

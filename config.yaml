@@ -1,14 +1,10 @@
 credentials:
   usernames:
-    canberkaslan: # Bu kullanıcı adıdır
-      email: canberk.aslan@example.com
-      name: Canberk Aslan # Bu görünecek isimdir
-      password: '$2b$12$xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx' # generate_keys.py ile oluşturulan hash'lenmiş şifre
-    ikinci_kullanici:
-      email: user2@example.com
-      name: İkinci Kullanıcı
-      password: '$2b$12$yyyyyyyyyyyyyyyyyyyyyyyyyyyyyy' # Başka bir hash'lenmiş şifre
-cookie:
+    stildiva: # Bu kullanıcı adıdır
+      email: bilgi@uniqstore.com.tr
+      name: Stil Diva # Bu görünecek isimdir
+      password: '$2b$12$6NPO8Y/Kmp/6zbG49yPde.VgnMOB1Ju9OQhUQz9lmX1A/ti.HKsvK' # generate_keys.py ile oluşturulan hash'lenmiş şifre
+      cookie:
   expiry_days: 999
   key: 'some_random_signature_key' # Rastgele bir anahtar girin
   name: some_cookie_name
