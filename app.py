@@ -363,31 +363,63 @@ def render_eksik_maliyet_tab(df_maliyetsiz):
 
 def render_maliyet_yonetimi():
     st.title("🗃️ Maliyet Veri Yönetimi")
-    load_cost_data()
+    load_cost_data() # Veriyi yükle
+
+    # --- YENİ ÜRÜN EKLEME KARTI ---
     with st.container():
         st.markdown('<div class="card">', unsafe_allow_html=True)
         st.subheader("➕ Yeni Ürün Ekle")
         with st.form("yeni_urun_form", clear_on_submit=True):
             f_col1, f_col2, f_col3 = st.columns(3)
-            yeni_model, yeni_barkod, yeni_alis = f_col1.text_input("Yeni Ürün Model Kodu"), f_col2.text_input("Yeni Ürün Barkodu"), f_col3.number_input("Yeni Ürün Alış Fiyatı (KDV Hariç)", min_value=0.0, format="%.2f")
+            yeni_model = f_col1.text_input("Yeni Ürün Model Kodu")
+            yeni_barkod = f_col2.text_input("Yeni Ürün Barkodu")
+            yeni_alis = f_col3.number_input("Yeni Ürün Alış Fiyatı (KDV Hariç)", min_value=0.0, format="%.2f")
+            
             if st.form_submit_button("Yeni Ürünü Ekle") and yeni_barkod and yeni_model:
                 yeni_veri = pd.DataFrame([{"Model Kodu": yeni_model, "Barkod": yeni_barkod, "Alış Fiyatı": yeni_alis}])
+                # Önce session state'i güncelle
                 st.session_state.df_maliyet = pd.concat([st.session_state.df_maliyet, yeni_veri], ignore_index=True).drop_duplicates(subset=['Barkod'], keep='last')
-                st.success(f"'{yeni_barkod}' barkodlu ürün eklendi.")
+                st.success(f"'{yeni_barkod}' barkodlu ürün eklendi. Değişikliklerin kalıcı olması için aşağıdaki butona tıklayarak Google Sheets'e kaydedin.")
         st.markdown('</div>', unsafe_allow_html=True)
 
+    # --- MEVCUT MALİYETLERİ DÜZENLEME KARTI (GÜNCELLENDİ) ---
     with st.container():
         st.markdown('<div class="card">', unsafe_allow_html=True)
         st.subheader("✏️ Mevcut Maliyetleri Düzenle")
-        edited_df = st.data_editor(st.session_state.df_maliyet, num_rows="dynamic", use_container_width=True, key="maliyet_editor")
-        if st.button("💾 Değişiklikleri Kaydet ve İndir"):
-            st.session_state.df_maliyet = edited_df.copy()
-            st.success("Değişiklikler kaydedildi!")
-            output = io.BytesIO()
-            with pd.ExcelWriter(output, engine='openpyxl') as writer:
-                st.session_state.df_maliyet.to_excel(writer, index=False, sheet_name='Maliyetler')
-            st.download_button(label="✅ Güncel Maliyet Excel'ini İndir", data=output.getvalue(), file_name='guncel_maliyet_referans.xlsx')
-            st.warning("**ÖNEMLİ:** Değişikliklerin kalıcı olması için bu indirdiğiniz dosyayı GitHub'a `maliyet_referans.xlsx` adıyla yeniden yüklemeniz gerekir!")
+        
+        # Data editor ile düzenleme yap
+        edited_df = st.data_editor(
+            st.session_state.df_maliyet, 
+            num_rows="dynamic", 
+            use_container_width=True, 
+            key="maliyet_editor"
+        )
+
+        # Buton artık Google Sheets'e kaydedecek
+        if st.button("💾 Değişiklikleri Google Sheets'e Kaydet"):
+            try:
+                # Google Sheets'e bağlan
+                creds = st.secrets["gcp_service_account"]
+                scopes = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
+                sa = Credentials.from_service_account_info(creds, scopes=scopes)
+                gc = gspread.authorize(sa)
+                
+                # Doğru dosyayı ve sayfayı aç
+                workbook = gc.open("maliyet_referans")
+                worksheet = workbook.worksheet("Sayfa1")
+                
+                # Değiştirilmiş DataFrame'i Google Sheets'e yaz
+                set_with_dataframe(worksheet, edited_df)
+                
+                # Lokal state'i de güncelle
+                st.session_state.df_maliyet = edited_df.copy()
+                
+                st.success("Değişiklikler başarıyla Google Sheets'e kaydedildi!")
+                st.balloons() # Başarıyı kutla!
+
+            except Exception as e:
+                st.error(f"Google Sheets'e yazılırken bir hata oluştu: {e}")
+        
         st.markdown('</div>', unsafe_allow_html=True)
 
 def render_hedef_analizi():
