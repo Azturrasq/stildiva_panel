@@ -22,21 +22,77 @@ st.set_page_config(
 
 # --- Özel CSS Stilleri ---
 def inject_custom_css():
-    st.markdown("""
+    # Session state'den mevcut temayı al, yoksa varsayılan olarak 'dark' ata
+    theme = st.session_state.get('theme', 'dark')
+
+    # Temaya göre renk paletini belirle
+    if theme == 'light':
+        # Açık Tema Renkleri
+        bg_color = "#f5f5f5"         # Beyaza yakın krem
+        text_color = "#212121"       # Siyaha yakın gri
+        card_bg_color = "#ffffff"    # Kartlar için saf beyaz
+        sidebar_bg_color = "#e8e8e8" # Kenar çubuğu için biraz daha koyu
+        accent_color = "#ff8c69"     # Ana renk
+    else:
+        # Koyu Tema Renkleri (Varsayılan)
+        bg_color = "#0e1117"         # Siyaha yakın gri
+        text_color = "#fafafa"       # Beyaz
+        card_bg_color = "#1c1e24"    # Kartlar için biraz daha açık
+        sidebar_bg_color = "#1c1e24" # Kenar çubuğu
+        accent_color = "#ff8c69"     # Ana renk
+
+    # CSS'i dinamik olarak oluştur ve enjekte et
+    st.markdown(f"""
         <style>
-            .main { background-color: #f5f5ff; }
-            h1, h2, h3 { color: #333; }
-            .card { background: #ffffff; border-radius: 10px; padding: 25px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); margin-bottom: 20px; }
-            .stMetric { background-color: #fafafa; border-left: 5px solid #ff8c69; padding: 15px; border-radius: 8px; }
-            .stButton > button { border-radius: 8px; border: 1px solid #ff8c69; background-color: #ff8c69; color: white; width: 100%; }
-            .stButton > button:hover { background-color: #ff7043; border-color: #ff7043; }
-            [data-testid="stSidebar"] { background-color: #ffffff; }
-            [data-testid="stSidebar"] .stSelectbox { background-color: #f0f2f6; }
-            .block-container {
-                max-width: 1200px;
-                padding-top: 2rem;
-                padding-bottom: 2rem;
-            }
+            /* Ana ve Kenar Çubuğu Arka Planları */
+            .main, .main .block-container {{
+                background-color: {bg_color};
+                color: {text_color};
+            }}
+            [data-testid="stSidebar"] {{
+                background-color: {sidebar_bg_color};
+            }}
+
+            /* Genel Metin ve Başlık Renkleri */
+            h1, h2, h3, h4, h5, h6, p, .st-emotion-cache-10trblm, .st-emotion-cache-16idsys p {{
+                color: {text_color};
+            }}
+            [data-testid="stSidebar"] * {{
+                color: {text_color};
+            }}
+
+            /* Kart Stili */
+            .card {{
+                background: {card_bg_color};
+                border-radius: 10px;
+                padding: 25px;
+                box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+                margin-bottom: 20px;
+            }}
+
+            /* Metrik Kutuları */
+            .stMetric {{
+                background-color: {card_bg_color};
+                border-left: 5px solid {accent_color};
+                padding: 15px;
+                border-radius: 8px;
+                color: {text_color};
+            }}
+            .stMetric .st-emotion-cache-1wivap2, .stMetric .st-emotion-cache-1g8m51x {{
+                 color: {text_color};
+            }}
+
+            /* Butonlar */
+            .stButton > button {{
+                border-radius: 8px;
+                border: 1px solid {accent_color};
+                background-color: {accent_color};
+                color: white;
+            }}
+            .stButton > button:hover {{
+                background-color: #ff7043;
+                border-color: #ff7043;
+            }}
         </style>
     """, unsafe_allow_html=True)
 
@@ -453,13 +509,28 @@ if authentication_status:
     # --- ANA UYGULAMA AKIŞI ---
     with st.sidebar:
         st.markdown(f"""<div style="text-align: center; padding-top: 20px;"><svg width="150" height="50" viewBox="0 0 150 50"><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="Brush Script MT, cursive" font-size="35" fill="#ff8c69">Stil Diva</text></svg></div>""", unsafe_allow_html=True)
-        # 'name' değişkenini doğrudan kullanıyoruz
         st.title(f'Hoşgeldin *{name}*')
         st.title("Yönetim Paneli")
-        authenticator.logout('Çıkış Yap', 'main') # Çıkış butonu
+        authenticator.logout('Çıkış Yap', 'main')
         st.markdown("---")
+
+        # --- YENİ: TEMA SEÇİM BUTONLARI ---
+        st.write("Tema Seçimi:")
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("☀️ Açık Mod", use_container_width=True):
+                st.session_state.theme = "light"
+                st.rerun() # Sayfanın yeni temayla anında yenilenmesi için
+        with col2:
+            if st.button("🌙 Koyu Mod", use_container_width=True):
+                st.session_state.theme = "dark"
+                st.rerun() # Sayfanın yeni temayla anında yenilenmesi için
+        
+        st.markdown("---")
+        # --- ESKİ KOD ---
         app_mode = st.selectbox("Hangi aracı kullanmak istersiniz?", ["Kârlılık Analizi", "Toptan Fiyat Teklifi", "Satış Fiyatı Hesaplayıcı", "Aylık Hedef Analizi", "Maliyet Yönetimi"], label_visibility="collapsed")
 
+    # CSS enjeksiyonunu, butonlar render edildikten sonra yapıyoruz
     inject_custom_css()
 
     page_map = {
