@@ -246,20 +246,21 @@ def run_and_display_analysis():
         df_maliyet = st.session_state.df_maliyet
         params = st.session_state.analiz_params
 
-        # --- KESİN ÇÖZÜM v2: Kapsamlı Barkod Temizliği ---
-        # Excel'den gelen ".0" ve olası boşluk sorunlarını gidermek için
-        # her iki DataFrame'deki 'Barkod' sütununu da temizliyoruz.
+        # --- KESİN ÇÖZÜM: Kapsamlı Barkod Temizliği ---
+        # Farklı kaynaklardan gelen (Excel ve Google Sheets) barkod formatlarını
+        # birleştirmeden önce standart hale getiriyoruz.
         
-        # 1. Sipariş DataFrame'ini temizle
-        df_siparis['Barkod'] = df_siparis['Barkod'].astype(str) # Önce string'e çevir
-        df_siparis['Barkod'] = df_siparis['Barkod'].str.replace(r'\.0$', '', regex=True) # Sonundaki ".0" ifadesini kaldır
-        df_siparis['Barkod'] = df_siparis['Barkod'].str.strip() # Başındaki/sonundaki boşlukları temizle
+        # 1. Sipariş DataFrame'ini (Excel'den gelen) temizle
+        df_siparis['Barkod'] = df_siparis['Barkod'].astype(str) # Önce metne çevir
+        df_siparis['Barkod'] = df_siparis['Barkod'].str.replace(r'\.0$', '', regex=True) # Sonundaki ".0" uzantısını kaldır
+        df_siparis['Barkod'] = df_siparis['Barkod'].str.strip() # Olası boşlukları temizle
 
-        # 2. Maliyet DataFrame'ini temizle (Garanti olsun diye)
+        # 2. Maliyet DataFrame'ini (Google Sheets'ten gelen) temizle
         df_maliyet['Barkod'] = df_maliyet['Barkod'].astype(str)
         df_maliyet['Barkod'] = df_maliyet['Barkod'].str.replace(r'\.0$', '', regex=True)
         df_maliyet['Barkod'] = df_maliyet['Barkod'].str.strip()
 
+        # Artık formatları eşit olan tabloları birleştir
         df_merged = pd.merge(df_siparis, df_maliyet, on="Barkod", how="left")
         df_maliyetli = df_merged[df_merged['Alış Fiyatı'].notna()].copy()
         df_maliyetsiz = df_merged[df_merged['Alış Fiyatı'].isna()].copy()
