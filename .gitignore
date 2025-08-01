@@ -6,6 +6,7 @@ venv/
 __pycache__/
 
 # Google Cloud kimlik bilgileri (ÇOK ÖNEMLİ)
+secrets.toml
 *.json
 
 # Yerel Excel dosyaları
