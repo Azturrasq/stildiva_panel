@@ -1,9 +1,9 @@
 streamlit
-streamlit-authenticator==0.2.1
+streamlit-authenticator
 pandas
-openpyxl
 gspread
 gspread-dataframe
-oauth2client
-PyYAML
+google-auth-oauthlib
+pyyaml
 plotly
+python-calamine
