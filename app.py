@@ -523,47 +523,48 @@ authenticator = stauth.Authenticate(
     config['cookie']['expiry_days']
 )
 
-# --- GÜNCELLENDİ: Login fonksiyon çağrısı ---
-# 'Login' başlığı kaldırıldı, sadece konum belirtildi.
-name, authentication_status, username = authenticator.login(location='main')
+# --- GÜNCELLENDİ: Yeni Kimlik Doğrulama Akışı ---
+# 1. Giriş formunu çiz. Bu fonksiyon artık bir şey döndürmüyor.
+authenticator.login(location='main')
 
-
-if authentication_status:
+# 2. Giriş durumunu st.session_state üzerinden kontrol et.
+if st.session_state["authentication_status"]:
     # --- ANA UYGULAMA AKIŞI ---
     with st.sidebar:
-        st.markdown(f"""<div style="text-align: center; padding-top: 20px;"><svg width="150" height="50" viewBox="0 0 150 50"><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="Brush Script MT, cursive" font-size="35" fill="#ff8c69">Stil Diva</text></svg></div>""", unsafe_allow_html=True)
-        st.title(f'Hoşgeldin *{name}*')
-        st.title("Yönetim Paneli")
+        # Logo ve diğer bileşenler buraya gelecek
+        try:
+            st.image("logo.png", width=200)
+        except Exception as e:
+            st.warning("logo.png dosyası bulunamadı.")
+
+        # Hoşgeldin mesajı ve çıkış butonu
+        st.write(f'Hoşgeldin *{st.session_state["name"]}*')
         authenticator.logout('Çıkış Yap', 'main')
         st.markdown("---")
 
-        # --- GÜNCELLENDİ: TEMA SEÇİM BUTONLARI ---
-        st.write("Tema Seçimi:")
+        # Sihirbazlar bölümü
+        st.subheader("Sihirbazlar")
+        app_mode = st.selectbox(
+            "Hangi aracı kullanmak istersiniz?",
+            ["Kârlılık Analizi", "Toptan Fiyat Teklifi", "Satış Fiyatı Hesaplayıcı", "Aylık Hedef Analizi", "Maliyet Yönetimi"],
+            label_visibility="collapsed"
+        )
+
+        # Tema seçici (en alta sabitlenmiş)
+        st.markdown('<div class="theme-switcher">', unsafe_allow_html=True)
         col1, col2 = st.columns(2)
         with col1:
-            # Sadece ikon, metin yok
             if st.button("☀️", use_container_width=True, help="Açık Mod"):
                 st.session_state.theme = "light"
                 st.rerun()
         with col2:
-            # Sadece ikon, metin yok
             if st.button("🌙", use_container_width=True, help="Koyu Mod"):
                 st.session_state.theme = "dark"
                 st.rerun()
-        
-        st.markdown("---")
-        
-        # --- GÜNCELLENDİ: SİHİRBAZLAR BAŞLIĞI VE SEÇİCİ ---
-        st.subheader("Sihirbazlar")
-        app_mode = st.selectbox(
-            "Hangi aracı kullanmak istersiniz?", 
-            ["Kârlılık Analizi", "Toptan Fiyat Teklifi", "Satış Fiyatı Hesaplayıcı", "Aylık Hedef Analizi", "Maliyet Yönetimi"], 
-            label_visibility="collapsed"
-        )
+        st.markdown('</div>', unsafe_allow_html=True)
 
-    # CSS enjeksiyonunu, butonlar render edildikten sonra yapıyoruz
+    # CSS enjeksiyonu ve sayfa yönlendirme
     inject_custom_css()
-
     page_map = {
         "Kârlılık Analizi": render_karlilik_analizi,
         "Toptan Fiyat Teklifi": render_toptan_fiyat_teklifi,
@@ -573,7 +574,7 @@ if authentication_status:
     }
     page_map[app_mode]()
 
-elif authentication_status is False:
-    st.error('Kullanıcı adı/şifre hatalı')
-elif authentication_status is None:
+elif st.session_state["authentication_status"] is False:
+    st.error('Kullanıcı adı/şifre yanlış')
+elif st.session_state["authentication_status"] is None:
     st.warning('Lütfen kullanıcı adı ve şifrenizi girin')
