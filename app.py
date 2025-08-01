@@ -118,21 +118,35 @@ def inject_custom_css():
 
 # Google Sheets bağlantısı ve veri yükleme fonksiyonu
 def load_cost_data_from_gsheets():
-    # Bu fonksiyonu hata ayıklama için geçici olarak değiştiriyoruz.
     if 'df_maliyet' not in st.session_state:
         try:
             creds = st.secrets["gcp_service_account"]
             scopes = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
             sa = Credentials.from_service_account_info(creds, scopes=scopes)
             gc = gspread.authorize(sa)
-            workbook = gc.open("Maliyetler") 
-            worksheet = workbook.worksheet("Sayfa1")
-            df = get_as_dataframe(worksheet, evaluate_formulas=True) # Formülleri de değerlendir
+            
+            # --- GÜNCELLENDİ: Doğru dosya adı kullanılıyor ---
+            spreadsheet_name = "maliyet_referans"
+            worksheet_name = "Sayfa1"
+            
+            workbook = gc.open(spreadsheet_name) 
+            worksheet = workbook.worksheet(worksheet_name)
+            
+            df = get_as_dataframe(worksheet, evaluate_formulas=True)
             st.session_state.df_maliyet = df
+            st.success("Maliyet verileri Google Sheets'ten başarıyla yüklendi!")
+
+        except gspread.exceptions.SpreadsheetNotFound:
+            st.error(f"KRİTİK HATA: '{spreadsheet_name}' adında bir Google E-Tablosu bulunamadı.")
+            st.warning("Lütfen dosya adının tam olarak doğru olduğundan ve hizmet hesabına paylaşım izni verdiğinizden emin olun.")
+            st.stop()
+        except gspread.exceptions.WorksheetNotFound:
+            st.error(f"KRİTİK HATA: '{spreadsheet_name}' tablosu içinde '{worksheet_name}' adında bir sayfa bulunamadı.")
+            st.warning("Lütfen E-Tablonuzdaki sayfa (sekme) adını kontrol edin.")
+            st.stop()
         except Exception as e:
-            # Hata olduğunda boş DataFrame oluşturmak yerine hatayı göster ve dur
-            st.error(f"Google Sheets'ten veri okunurken KRİTİK HATA: {e}")
-            st.stop() # Uygulamanın devam etmesini engelle
+            st.error(f"Google Sheets'ten veri okunurken beklenmedik bir hata oluştu: {e}")
+            st.stop()
             
     return st.session_state.df_maliyet
 
