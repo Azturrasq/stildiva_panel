@@ -118,28 +118,21 @@ def inject_custom_css():
 
 # Google Sheets bağlantısı ve veri yükleme fonksiyonu
 def load_cost_data_from_gsheets():
+    # Bu fonksiyonu hata ayıklama için geçici olarak değiştiriyoruz.
     if 'df_maliyet' not in st.session_state:
         try:
-            # Streamlit'in Secrets yönetiminden kimlik bilgilerini al
             creds = st.secrets["gcp_service_account"]
             scopes = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
-            
-            # Kimlik bilgilerini yetkilendir
             sa = Credentials.from_service_account_info(creds, scopes=scopes)
             gc = gspread.authorize(sa)
-            
-            # Google Sheet'i aç ve veriyi DataFrame olarak oku
-            # "Maliyetler" -> Google Sheet dosyanızın adı
-            # "Sayfa1" -> Çalışma sayfasının adı
             workbook = gc.open("Maliyetler") 
             worksheet = workbook.worksheet("Sayfa1")
-            
-            df = get_as_dataframe(worksheet)
+            df = get_as_dataframe(worksheet, evaluate_formulas=True) # Formülleri de değerlendir
             st.session_state.df_maliyet = df
-            
         except Exception as e:
-            st.session_state.df_maliyet = pd.DataFrame(columns=["Model Kodu", "Barkod", "Alış Fiyatı"])
-            st.sidebar.error(f"Google Sheets'ten veri okunurken hata: {e}")
+            # Hata olduğunda boş DataFrame oluşturmak yerine hatayı göster ve dur
+            st.error(f"Google Sheets'ten veri okunurken KRİTİK HATA: {e}")
+            st.stop() # Uygulamanın devam etmesini engelle
             
     return st.session_state.df_maliyet
 
@@ -252,6 +245,12 @@ def run_and_display_analysis():
         df_siparis = st.session_state.df_tum_siparisler
         df_maliyet = st.session_state.df_maliyet
         params = st.session_state.analiz_params
+
+        # --- KESİN ÇÖZÜM: Veri tiplerini eşitleme ---
+        # Her iki DataFrame'deki 'Barkod' sütununu da string'e çevirerek
+        # olası tip uyuşmazlıklarını (örn: 123 vs "123") ortadan kaldır.
+        df_siparis['Barkod'] = df_siparis['Barkod'].astype(str)
+        df_maliyet['Barkod'] = df_maliyet['Barkod'].astype(str)
 
         df_merged = pd.merge(df_siparis, df_maliyet, on="Barkod", how="left")
         df_maliyetli = df_merged[df_merged['Alış Fiyatı'].notna()].copy()
