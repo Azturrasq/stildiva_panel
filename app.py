@@ -21,65 +21,34 @@ st.set_page_config(
 )
 
 # --- Özel CSS Stilleri ---
+# GÜNCELLENDİ: Sabit ve tek tip tema için basitleştirilmiş CSS
 def inject_custom_css():
-    # Session state'den mevcut temayı al, yoksa varsayılan olarak 'dark' ata
-    theme = st.session_state.get('theme', 'dark')
+    # Belirlenen sabit renk paleti
+    bg_color = "#f5f5f5"         # Beyaza yakın ekru
+    text_color = "#212121"       # Siyaha yakın gri
+    card_bg_color = "#ffffff"    # Kartlar için saf beyaz
+    accent_color = "#ff8c69"     # Ana vurgu rengi (butonlar vb.)
+    secondary_bg_color = "#e8e8e8" # Selectbox gibi elemanlar için
 
-    # Temaya göre renk paletini belirle
-    if theme == 'light':
-        # Açık Tema Renkleri
-        bg_color = "#f5f5f5"         # Beyaza yakın krem
-        text_color = "#212121"       # Siyaha yakın gri
-        card_bg_color = "#ffffff"    # Kartlar için saf beyaz
-        sidebar_bg_color = "#e8e8e8" # Kenar çubuğu için biraz daha koyu
-        accent_color = "#ff8c69"     # Ana renk
-        secondary_bg_color = "#f0f2f6" # Selectbox gibi elemanlar için
-    else:
-        # Koyu Tema Renkleri (Varsayılan)
-        bg_color = "#0e1117"         # Siyaha yakın gri
-        text_color = "#fafafa"       # Beyaz
-        card_bg_color = "#1c1e24"    # Kartlar için biraz daha açık
-        sidebar_bg_color = "#1c1e24" # Kenar çubuğu
-        accent_color = "#ff8c69"     # Ana renk
-        secondary_bg_color = "#262730" # Selectbox gibi elemanlar için
-
-    # CSS'i dinamik olarak oluştur ve enjekte et
     st.markdown(f"""
         <style>
             /* === GENEL GÖVDE VE ARKA PLAN === */
-            /* Bu, ana panelin arka planını değiştirmeyi garantiler */
-            [data-testid="stAppViewContainer"] > .main {{
+            /* Ana panel ve kenar çubuğu dahil tüm arka planı hedefler */
+            [data-testid="stAppViewContainer"], [data-testid="stSidebar"] {{
                 background-color: {bg_color};
             }}
-            .main .block-container {{
-                background-color: {bg_color};
-                color: {text_color};
-            }}
 
-            /* === KENAR ÇUBUĞU (SIDEBAR) === */
-            [data-testid="stSidebar"] {{
-                background-color: {sidebar_bg_color};
-            }}
-
-            /* === METİN VE BAŞLIKLAR === */
-            /* Hem ana paneldeki hem de kenar çubuğundaki tüm metinleri hedefler */
-            h1, h2, h3, h4, h5, h6, p, label, .st-emotion-cache-10trblm, .st-emotion-cache-16idsys p {{
-                color: {text_color};
-            }}
-            [data-testid="stSidebar"] * {{
-                color: {text_color};
+            /* === TÜM METİNLER === */
+            /* Sayfadaki tüm metin, başlık ve etiketleri hedefler */
+            body, h1, h2, h3, h4, h5, h6, p, label, .st-emotion-cache-10trblm, .st-emotion-cache-16idsys p, div, span {{
+                color: {text_color} !important;
             }}
 
             /* === ÖZEL BİLEŞENLER === */
-            /* "Sihirbazlar" selectbox'ını hedefler */
+            /* Selectbox */
             [data-testid="stSelectbox"] div[data-baseweb="select"] > div {{
                 background-color: {secondary_bg_color};
                 border-color: {accent_color};
-                color: {text_color};
-            }}
-            /* Selectbox içindeki metin */
-            [data-testid="stSelectbox"] div[data-baseweb="select"] span {{
-                 color: {text_color};
             }}
 
             /* Kart Stili */
@@ -87,7 +56,7 @@ def inject_custom_css():
                 background: {card_bg_color};
                 border-radius: 10px;
                 padding: 25px;
-                box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+                box-shadow: 0 4px 8px rgba(0,0,0,0.05);
                 margin-bottom: 20px;
             }}
 
@@ -98,16 +67,13 @@ def inject_custom_css():
                 padding: 15px;
                 border-radius: 8px;
             }}
-            .stMetric label, .stMetric .st-emotion-cache-1wivap2, .stMetric .st-emotion-cache-1g8m51x {{
-                 color: {text_color} !important; /* !important ekleyerek önceliği artırıyoruz */
-            }}
 
             /* Butonlar */
             .stButton > button {{
                 border-radius: 8px;
                 border: 1px solid {accent_color};
                 background-color: {accent_color};
-                color: white;
+                color: white !important; /* Buton yazısı beyaz kalmalı */
             }}
             .stButton > button:hover {{
                 background-color: #ff7043;
@@ -582,19 +548,6 @@ if st.session_state["authentication_status"]:
             ["Kârlılık Analizi", "Toptan Fiyat Teklifi", "Satış Fiyatı Hesaplayıcı", "Aylık Hedef Analizi", "Maliyet Yönetimi"],
             label_visibility="collapsed"
         )
-
-        # Tema seçici (en alta sabitlenmiş)
-        st.markdown('<div class="theme-switcher">', unsafe_allow_html=True)
-        col1, col2 = st.columns(2)
-        with col1:
-            if st.button("☀️", use_container_width=True, help="Açık Mod"):
-                st.session_state.theme = "light"
-                st.rerun()
-        with col2:
-            if st.button("🌙", use_container_width=True, help="Koyu Mod"):
-                st.session_state.theme = "dark"
-                st.rerun()
-        st.markdown('</div>', unsafe_allow_html=True)
 
     # CSS enjeksiyonu ve sayfa yönlendirme
     inject_custom_css()
