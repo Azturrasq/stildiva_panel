@@ -149,73 +149,71 @@ def render_karlilik_analizi():
     if st.session_state.df_siparis_orjinal is not None:
         df_siparis_orjinal = st.session_state.df_siparis_orjinal
 
-        with st.container():
-            st.markdown('<div class="card">', unsafe_allow_html=True)
-            st.subheader("🔍 Filtreleme Seçenekleri")
-            filt_col1, filt_col2 = st.columns([1, 2])
+        # --- GÜNCELLENDİ: Gereksiz st.container sarmalayıcıları kaldırıldı ---
+        
+        # Filtreleme Kartı
+        st.markdown('<div class="card">', unsafe_allow_html=True)
+        st.subheader("🔍 Filtreleme Seçenekleri")
+        filt_col1, filt_col2 = st.columns([1, 2])
 
-            with filt_col1:
-                min_tarih = df_siparis_orjinal['Sipariş Tarihi'].min().date()
-                maks_tarih = df_siparis_orjinal['Sipariş Tarihi'].max().date()
-                
-                # --- GÜNCELLENDİ: Tarih aralığı kontrolü ---
-                # 1. Sonucu önce tek bir değişkene ata
-                secilen_tarih_araligi = st.date_input(
-                    "Tarih Aralığı Seçin", value=(min_tarih, maks_tarih),
-                    min_value=min_tarih, max_value=maks_tarih, key='tarih_filtresi'
-                )
-                
-                # 2. Eğer iki tarih seçilmediyse, uyarı ver ve dur
-                if len(secilen_tarih_araligi) != 2:
-                    st.warning("Lütfen bir başlangıç ve bitiş tarihi seçin.")
-                    st.stop() # Kodun geri kalanının çalışmasını engelle
-                
-                # 3. Her şey yolundaysa, değişkenlere ata
-                secilen_baslangic, secilen_bitis = secilen_tarih_araligi
+        with filt_col1:
+            min_tarih = df_siparis_orjinal['Sipariş Tarihi'].min().date()
+            maks_tarih = df_siparis_orjinal['Sipariş Tarihi'].max().date()
+            
+            secilen_tarih_araligi = st.date_input(
+                "Tarih Aralığı Seçin", value=(min_tarih, maks_tarih),
+                min_value=min_tarih, max_value=maks_tarih, key='tarih_filtresi'
+            )
+            
+            if len(secilen_tarih_araligi) != 2:
+                st.warning("Lütfen bir başlangıç ve bitiş tarihi seçin.")
+                st.stop()
+            
+            secilen_baslangic, secilen_bitis = secilen_tarih_araligi
 
-            with filt_col2:
-                platformlar = sorted(df_siparis_orjinal['Platform'].unique())
-                secilen_platformlar = st.multiselect(
-                    "Platforma Göre Filtrele", options=platformlar,
-                    default=platformlar, key='platform_filtresi'
-                )
-            st.markdown('</div>', unsafe_allow_html=True)
+        with filt_col2:
+            platformlar = sorted(df_siparis_orjinal['Platform'].unique())
+            secilen_platformlar = st.multiselect(
+                "Platforma Göre Filtrele", options=platformlar,
+                default=platformlar, key='platform_filtresi'
+            )
+        st.markdown('</div>', unsafe_allow_html=True)
 
-        with st.container():
-            st.markdown('<div class="card">', unsafe_allow_html=True)
-            st.subheader("⚙️ Analiz Parametreleri")
-            col1, col2, col3 = st.columns(3)
-            with col1:
-                komisyon_oran = st.number_input("Ort. Komisyon (%)", min_value=0.0, value=21.5, step=0.1)
-                kdv_oran = st.number_input("KDV Oranı (%)", min_value=0.0, value=10.0, step=1.0)
-            with col2:
-                toplam_kargo_faturasi = st.number_input("Toplam Kargo Faturası (TL)", min_value=0.0, value=0.0, step=1.0)
-                kargo_maliyeti_siparis_basi = st.number_input("Sipariş Başı Kargo (TL)", min_value=0.0, value=80.0, step=0.5, disabled=(toplam_kargo_faturasi > 0))
-            with col3:
-                toplam_reklam_butcesi = st.number_input("Toplam Reklam Bütçesi (TL)", min_value=0.0, value=0.0, step=1.0)
-                reklam_gideri_urun_basi = st.number_input("Ürün Başı Reklam (TL)", min_value=0.0, value=0.0, step=0.1, disabled=(toplam_reklam_butcesi > 0))
+        # Analiz Parametreleri Kartı
+        st.markdown('<div class="card">', unsafe_allow_html=True)
+        st.subheader("⚙️ Analiz Parametreleri")
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            komisyon_oran = st.number_input("Ort. Komisyon (%)", min_value=0.0, value=21.5, step=0.1)
+            kdv_oran = st.number_input("KDV Oranı (%)", min_value=0.0, value=10.0, step=1.0)
+        with col2:
+            toplam_kargo_faturasi = st.number_input("Toplam Kargo Faturası (TL)", min_value=0.0, value=0.0, step=1.0)
+            kargo_maliyeti_siparis_basi = st.number_input("Sipariş Başı Kargo (TL)", min_value=0.0, value=80.0, step=0.5, disabled=(toplam_kargo_faturasi > 0))
+        with col3:
+            toplam_reklam_butcesi = st.number_input("Toplam Reklam Bütçesi (TL)", min_value=0.0, value=0.0, step=1.0)
+            reklam_gideri_urun_basi = st.number_input("Ürün Başı Reklam (TL)", min_value=0.0, value=0.0, step=0.1, disabled=(toplam_reklam_butcesi > 0))
 
-            if st.button("🚀 Filtrelenmiş Veriyle Analizi Başlat", key="karlilik_button"):
-                df_filtrelenmis = df_siparis_orjinal[
-                    (df_siparis_orjinal['Sipariş Tarihi'].dt.date >= secilen_baslangic) &
-                    (df_siparis_orjinal['Sipariş Tarihi'].dt.date <= secilen_bitis) &
-                    (df_siparis_orjinal['Platform'].isin(secilen_platformlar))
-                ]
+        if st.button("🚀 Filtrelenmiş Veriyle Analizi Başlat", key="karlilik_button"):
+            df_filtrelenmis = df_siparis_orjinal[
+                (df_siparis_orjinal['Sipariş Tarihi'].dt.date >= secilen_baslangic) &
+                (df_siparis_orjinal['Sipariş Tarihi'].dt.date <= secilen_bitis) &
+                (df_siparis_orjinal['Platform'].isin(secilen_platformlar))
+            ]
 
-                if df_filtrelenmis.empty:
-                    st.warning("Seçtiğiniz filtrelere uygun hiçbir sipariş bulunamadı.")
-                    st.session_state.analiz_calisti = False
-                else:
-                    st.session_state.df_tum_siparisler = df_filtrelenmis.copy()
-                    st.session_state.analiz_params = {
-                        "komisyon_oran": komisyon_oran, "kdv_oran": kdv_oran,
-                        "toplam_kargo_faturasi": toplam_kargo_faturasi, "kargo_maliyeti_siparis_basi": kargo_maliyeti_siparis_basi,
-                        "toplam_reklam_butcesi": toplam_reklam_butcesi, "reklam_gideri_urun_basi": reklam_gideri_urun_basi,
-                        "satis_fiyati_sutunu": 'Tutar'
-                    }
-                    st.session_state.analiz_calisti = True
-                    st.rerun()
-            st.markdown('</div>', unsafe_allow_html=True)
+            if df_filtrelenmis.empty:
+                st.warning("Seçtiğiniz filtrelere uygun hiçbir sipariş bulunamadı.")
+                st.session_state.analiz_calisti = False
+            else:
+                st.session_state.df_tum_siparisler = df_filtrelenmis.copy()
+                st.session_state.analiz_params = {
+                    "komisyon_oran": komisyon_oran, "kdv_oran": kdv_oran,
+                    "toplam_kargo_faturasi": toplam_kargo_faturasi, "kargo_maliyeti_siparis_basi": kargo_maliyeti_siparis_basi,
+                    "toplam_reklam_butcesi": toplam_reklam_butcesi, "reklam_gideri_urun_basi": reklam_gideri_urun_basi,
+                    "satis_fiyati_sutunu": 'Tutar'
+                }
+                st.session_state.analiz_calisti = True
+                st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
 
     if st.session_state.get('analiz_calisti', False):
         run_and_display_analysis()
