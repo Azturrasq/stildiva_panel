@@ -33,6 +33,7 @@ def inject_custom_css():
         card_bg_color = "#ffffff"    # Kartlar için saf beyaz
         sidebar_bg_color = "#e8e8e8" # Kenar çubuğu için biraz daha koyu
         accent_color = "#ff8c69"     # Ana renk
+        secondary_bg_color = "#f0f2f6" # Selectbox gibi elemanlar için
     else:
         # Koyu Tema Renkleri (Varsayılan)
         bg_color = "#0e1117"         # Siyaha yakın gri
@@ -40,25 +41,45 @@ def inject_custom_css():
         card_bg_color = "#1c1e24"    # Kartlar için biraz daha açık
         sidebar_bg_color = "#1c1e24" # Kenar çubuğu
         accent_color = "#ff8c69"     # Ana renk
+        secondary_bg_color = "#262730" # Selectbox gibi elemanlar için
 
     # CSS'i dinamik olarak oluştur ve enjekte et
     st.markdown(f"""
         <style>
-            /* Ana ve Kenar Çubuğu Arka Planları */
-            .main, .main .block-container {{
+            /* === GENEL GÖVDE VE ARKA PLAN === */
+            /* Bu, ana panelin arka planını değiştirmeyi garantiler */
+            [data-testid="stAppViewContainer"] > .main {{
+                background-color: {bg_color};
+            }}
+            .main .block-container {{
                 background-color: {bg_color};
                 color: {text_color};
             }}
+
+            /* === KENAR ÇUBUĞU (SIDEBAR) === */
             [data-testid="stSidebar"] {{
                 background-color: {sidebar_bg_color};
             }}
 
-            /* Genel Metin ve Başlık Renkleri */
-            h1, h2, h3, h4, h5, h6, p, .st-emotion-cache-10trblm, .st-emotion-cache-16idsys p {{
+            /* === METİN VE BAŞLIKLAR === */
+            /* Hem ana paneldeki hem de kenar çubuğundaki tüm metinleri hedefler */
+            h1, h2, h3, h4, h5, h6, p, label, .st-emotion-cache-10trblm, .st-emotion-cache-16idsys p {{
                 color: {text_color};
             }}
             [data-testid="stSidebar"] * {{
                 color: {text_color};
+            }}
+
+            /* === ÖZEL BİLEŞENLER === */
+            /* "Sihirbazlar" selectbox'ını hedefler */
+            [data-testid="stSelectbox"] div[data-baseweb="select"] > div {{
+                background-color: {secondary_bg_color};
+                border-color: {accent_color};
+                color: {text_color};
+            }}
+            /* Selectbox içindeki metin */
+            [data-testid="stSelectbox"] div[data-baseweb="select"] span {{
+                 color: {text_color};
             }}
 
             /* Kart Stili */
@@ -76,10 +97,9 @@ def inject_custom_css():
                 border-left: 5px solid {accent_color};
                 padding: 15px;
                 border-radius: 8px;
-                color: {text_color};
             }}
-            .stMetric .st-emotion-cache-1wivap2, .stMetric .st-emotion-cache-1g8m51x {{
-                 color: {text_color};
+            .stMetric label, .stMetric .st-emotion-cache-1wivap2, .stMetric .st-emotion-cache-1g8m51x {{
+                 color: {text_color} !important; /* !important ekleyerek önceliği artırıyoruz */
             }}
 
             /* Butonlar */
