@@ -2,8 +2,8 @@
 from PyInstaller.utils.hooks import collect_data_files
 
 datas = [('app.py', '.'), ('config.yaml', '.'), ('logo.png', '.')]
-datas += collect_data_files('gspread_dataframe')
 datas += collect_data_files('gspread')
+datas += collect_data_files('streamlit')
 
 
 a = Analysis(
@@ -11,7 +11,7 @@ a = Analysis(
     pathex=[],
     binaries=[],
     datas=datas,
-    hiddenimports=['gspread_dataframe'],
+    hiddenimports=['gspread_dataframe', 'streamlit.web.cli'],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],

@@ -1,15 +1,28 @@
 import streamlit as st
-import streamlit_authenticator as stauth
+import pandas as pd
+import plotly.express as px
 import yaml
 from yaml.loader import SafeLoader
-import pandas as pd
-import gspread
-from gspread_dataframe import get_as_dataframe, set_with_dataframe
-from google.oauth2.service_account import Credentials
+import streamlit_authenticator as stauth
 import io
+import os
+import sys
 from datetime import datetime
 import calendar
-import plotly.express as px
+from gspread_dataframe import get_as_dataframe, set_with_dataframe
+from google.oauth2.service_account import Credentials
+import gspread
+
+# --- YENİ: Paket içinde dosya yolunu bulan yardımcı fonksiyon ---
+def get_resource_path(relative_path):
+    """ Paketlendiğinde veya normal çalıştırıldığında doğru dosya yolunu döndürür. """
+    try:
+        # PyInstaller geçici bir _MEIPASS klasörü oluşturur
+        base_path = sys._MEIPASS
+    except Exception:
+        # Normal Python ile çalıştırılıyorsa
+        base_path = os.path.abspath(".")
+    return os.path.join(base_path, relative_path)
 
 # --------------------------------------------------------------------------------
 # Sayfa Yapılandırması ve Başlangıç Ayarları
@@ -149,8 +162,13 @@ def render_karlilik_analizi():
     if st.session_state.df_siparis_orjinal is not None:
         df_siparis_orjinal = st.session_state.df_siparis_orjinal
 
-        # --- GÜNCELLENDİ: Gereksiz st.container sarmalayıcıları kaldırıldı ---
-        
+        # --- YENİ: Boş DataFrame kontrolü ---
+        # Eğer yüklenen Excel'de geçerli tarih içeren hiçbir satır yoksa,
+        # df_siparis_orjinal boş olur ve hata verir. Bunu burada engelliyoruz.
+        if df_siparis_orjinal.empty:
+            st.error("Yüklenen Excel dosyasında geçerli 'Sipariş Tarihi' içeren hiçbir sipariş bulunamadı. Lütfen dosyanızı kontrol edin.")
+            return # Fonksiyonun geri kalanını çalıştırmayı durdur
+
         # Filtreleme Kartı
         st.markdown('<div class="card">', unsafe_allow_html=True)
         st.subheader("🔍 Filtreleme Seçenekleri")
@@ -540,11 +558,10 @@ def render_toptan_fiyat_teklifi():
 
 # --- KULLANICI GİRİŞİ ---
 # config.yaml dosyasından kimlik bilgilerini oku
-with open('config.yaml') as file:
+with open(get_resource_path('config.yaml')) as file: # GÜNCELLENDİ
     config = yaml.load(file, Loader=SafeLoader)
 
 # Kimlik doğrulayıcıyı oluştur
-# GÜNCELLEME: 'preauthorized' parametresi kütüphanenin yeni versiyonlarında kaldırılmıştır.
 authenticator = stauth.Authenticate(
     config['credentials'],
     config['cookie']['name'],

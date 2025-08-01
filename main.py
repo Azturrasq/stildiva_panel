@@ -8,21 +8,23 @@ import os
 # PyInstaller'ın geçici dosya yolunu çözmek için yardımcı fonksiyon
 def get_path(relative_path):
     try:
-        # PyInstaller geçici bir _MEIPASS klasörü oluşturur
         base_path = sys._MEIPASS
     except Exception:
-        # Normal Python ile çalıştırılıyorsa
         base_path = os.path.abspath(".")
     return os.path.join(base_path, relative_path)
 
-# Streamlit sunucusunu ayrı bir iş parçacığında (thread) çalıştıracak fonksiyon
+# Streamlit sunucusunu çalıştıracak ve log tutacak fonksiyon
 def run_streamlit():
-    # PyInstaller ile paketlendiğinde app.py'nin yolunu doğru bulmalıyız
     app_path = get_path("app.py")
+    log_path = os.path.join(os.path.expanduser("~"), "Desktop", "app_log.txt") # Log dosyasını Masaüstüne kaydet
     
-    # Streamlit'i "headless" modda çalıştır, böylece kendi tarayıcı penceresini açmaz
     command = ["streamlit", "run", app_path, "--server.headless", "true", "--server.port", "8501"]
-    subprocess.run(command)
+    
+    # Hataları yakalamak için log dosyasını aç
+    with open(log_path, "w") as log_file:
+        # subprocess.run yerine Popen kullanarak işlemi başlat ve logları yönlendir
+        process = subprocess.Popen(command, stdout=log_file, stderr=log_file, text=True)
+        process.wait() # İşlem bitene kadar bekle
 
 if __name__ == '__main__':
     # Streamlit'i başlat
