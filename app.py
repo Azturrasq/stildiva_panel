@@ -184,10 +184,21 @@ def render_karlilik_analizi():
             with filt_col1:
                 min_tarih = df_siparis_orjinal['Sipariş Tarihi'].min().date()
                 maks_tarih = df_siparis_orjinal['Sipariş Tarihi'].max().date()
-                secilen_baslangic, secilen_bitis = st.date_input(
+                
+                # --- GÜNCELLENDİ: Tarih aralığı kontrolü ---
+                # 1. Sonucu önce tek bir değişkene ata
+                secilen_tarih_araligi = st.date_input(
                     "Tarih Aralığı Seçin", value=(min_tarih, maks_tarih),
                     min_value=min_tarih, max_value=maks_tarih, key='tarih_filtresi'
                 )
+                
+                # 2. Eğer iki tarih seçilmediyse, uyarı ver ve dur
+                if len(secilen_tarih_araligi) != 2:
+                    st.warning("Lütfen bir başlangıç ve bitiş tarihi seçin.")
+                    st.stop() # Kodun geri kalanının çalışmasını engelle
+                
+                # 3. Her şey yolundaysa, değişkenlere ata
+                secilen_baslangic, secilen_bitis = secilen_tarih_araligi
 
             with filt_col2:
                 platformlar = sorted(df_siparis_orjinal['Platform'].unique())
