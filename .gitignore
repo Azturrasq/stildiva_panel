@@ -2,8 +2,13 @@
 # Sanal ortam klasörü
 venv/
 
+# Derleme çıktıları
+/dist
+/build
+
 # Python cache
 __pycache__/
+*.pyc
 
 # Google Cloud kimlik bilgileri (ÇOK ÖNEMLİ)
 secrets.toml
@@ -11,3 +16,6 @@ secrets.toml
 
 # Yerel Excel dosyaları
 *.xlsx
+
+# DMG dosyası
+*.dmg
