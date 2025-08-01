@@ -514,21 +514,29 @@ if authentication_status:
         authenticator.logout('Çıkış Yap', 'main')
         st.markdown("---")
 
-        # --- YENİ: TEMA SEÇİM BUTONLARI ---
+        # --- GÜNCELLENDİ: TEMA SEÇİM BUTONLARI ---
         st.write("Tema Seçimi:")
         col1, col2 = st.columns(2)
         with col1:
-            if st.button("☀️ Açık Mod", use_container_width=True):
+            # Sadece ikon, metin yok
+            if st.button("☀️", use_container_width=True, help="Açık Mod"):
                 st.session_state.theme = "light"
-                st.rerun() # Sayfanın yeni temayla anında yenilenmesi için
+                st.rerun()
         with col2:
-            if st.button("🌙 Koyu Mod", use_container_width=True):
+            # Sadece ikon, metin yok
+            if st.button("🌙", use_container_width=True, help="Koyu Mod"):
                 st.session_state.theme = "dark"
-                st.rerun() # Sayfanın yeni temayla anında yenilenmesi için
+                st.rerun()
         
         st.markdown("---")
-        # --- ESKİ KOD ---
-        app_mode = st.selectbox("Hangi aracı kullanmak istersiniz?", ["Kârlılık Analizi", "Toptan Fiyat Teklifi", "Satış Fiyatı Hesaplayıcı", "Aylık Hedef Analizi", "Maliyet Yönetimi"], label_visibility="collapsed")
+        
+        # --- GÜNCELLENDİ: SİHİRBAZLAR BAŞLIĞI VE SEÇİCİ ---
+        st.subheader("Sihirbazlar")
+        app_mode = st.selectbox(
+            "Hangi aracı kullanmak istersiniz?", 
+            ["Kârlılık Analizi", "Toptan Fiyat Teklifi", "Satış Fiyatı Hesaplayıcı", "Aylık Hedef Analizi", "Maliyet Yönetimi"], 
+            label_visibility="collapsed"
+        )
 
     # CSS enjeksiyonunu, butonlar render edildikten sonra yapıyoruz
     inject_custom_css()
