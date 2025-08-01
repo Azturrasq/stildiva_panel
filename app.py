@@ -442,17 +442,19 @@ authenticator = stauth.Authenticate(
     config['cookie']['name'],
     config['cookie']['key'],
     config['cookie']['expiry_days']
-    # config['preauthorized'] # <-- BU SATIRI SİLİN VEYA YORUM SATIRI YAPIN
 )
 
-# Login formunu render et
-authenticator.login()
+# --- YENİ VE DOĞRU GİRİŞ MANTIĞI (v0.2.1 için) ---
+# 'login' fonksiyonu, formun adını ve konumunu argüman olarak alır.
+# Geriye kullanıcı adı, doğrulama durumu ve kullanıcı adını döndürür.
+name, authentication_status, username = authenticator.login('Login', 'main')
 
-if st.session_state["authentication_status"]:
+if authentication_status:
     # --- ANA UYGULAMA AKIŞI ---
     with st.sidebar:
         st.markdown(f"""<div style="text-align: center; padding-top: 20px;"><svg width="150" height="50" viewBox="0 0 150 50"><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="Brush Script MT, cursive" font-size="35" fill="#ff8c69">Stil Diva</text></svg></div>""", unsafe_allow_html=True)
-        st.title(f'Hoşgeldin *{st.session_state["name"]}*')
+        # 'name' değişkenini doğrudan kullanıyoruz
+        st.title(f'Hoşgeldin *{name}*')
         st.title("Yönetim Paneli")
         authenticator.logout('Çıkış Yap', 'main') # Çıkış butonu
         st.markdown("---")
@@ -469,7 +471,7 @@ if st.session_state["authentication_status"]:
     }
     page_map[app_mode]()
 
-elif st.session_state["authentication_status"] is False:
+elif authentication_status is False:
     st.error('Kullanıcı adı/şifre hatalı')
-elif st.session_state["authentication_status"] is None:
+elif authentication_status is None:
     st.warning('Lütfen kullanıcı adı ve şifrenizi girin')
