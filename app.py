@@ -515,12 +515,12 @@ with open('config.yaml') as file:
     config = yaml.load(file, Loader=SafeLoader)
 
 # Kimlik doğrulayıcıyı oluştur
+# GÜNCELLEME: 'preauthorized' parametresi kütüphanenin yeni versiyonlarında kaldırılmıştır.
 authenticator = stauth.Authenticate(
     config['credentials'],
     config['cookie']['name'],
     config['cookie']['key'],
-    config['cookie']['expiry_days'],
-    config['preauthorized']
+    config['cookie']['expiry_days']
 )
 
 # --- GÜNCELLENDİ: Login fonksiyon çağrısı ---

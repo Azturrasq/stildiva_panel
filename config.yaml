@@ -9,8 +9,3 @@ cookie:
   expiry_days: 30
   key: some_random_key # Buradaki anahtarın gizli olduğundan emin olun
   name: some_cookie_name
-
-# --- BU BÖLÜMÜ EKLEYİN ---
-# Yeni kullanıcı kaydına izin verilen e-postalar (kullanmıyorsanız boş bırakın)
-preauthorized:
-  emails: []
