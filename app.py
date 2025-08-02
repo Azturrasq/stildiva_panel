@@ -17,17 +17,33 @@ import gspread
 
 # --- YENİ: SADECE WEB İÇİN KİMLİK DOĞRULAMA ---
 def get_google_creds():
-    """SADECE Streamlit Cloud için kimlik doğrulaması yapar."""
+    """
+    Streamlit Cloud ve yerel geliştirme ortamı için kimlik doğrulaması yapar.
+    Önce st.secrets'ı dener (Cloud için), başarısız olursa yerel secrets.json dosyasını arar.
+    """
+    scopes = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
     try:
+        # Streamlit Cloud'da çalışıyorsa bunu kullan
         creds_dict = st.secrets["gcp_service_account"]
-        scopes = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
+        st.success("Streamlit Cloud kimlik bilgileri kullanılıyor.", icon="☁️")
         sa = Credentials.from_service_account_info(creds_dict, scopes=scopes)
         gc = gspread.authorize(sa)
         return gc
-    except Exception:
-        st.error("KRİTİK HATA: Streamlit Cloud 'Secrets' ayarları okunamadı veya geçersiz.")
-        st.error("Lütfen 'gcp_service_account' secret'ının doğru yapılandırıldığından emin olun.")
-        st.stop()
+    except (KeyError, FileNotFoundError):
+        # Yerelde çalışıyorsa veya secrets bulunamazsa bunu kullan
+        try:
+            # Proje kök dizininde 'secrets.json' dosyasını ara
+            if os.path.exists("secrets.json"):
+                sa = Credentials.from_service_account_file("secrets.json", scopes=scopes)
+                gc = gspread.authorize(sa)
+                return gc
+            else:
+                st.error("KRİTİK HATA: Yerel kimlik bilgisi dosyası 'secrets.json' bulunamadı.")
+                st.info("Uygulamayı yerel olarak çalıştırmak için Google Cloud hizmet hesabı anahtarınızı içeren 'secrets.json' dosyasını proje ana dizinine ekleyin.")
+                st.stop()
+        except Exception as e:
+            st.error(f"Yerel 'secrets.json' dosyası okunurken bir hata oluştu: {e}")
+            st.stop()
 
 # --------------------------------------------------------------------------------
 # Sayfa Yapılandırması ve Başlangıç Ayarları
@@ -516,15 +532,16 @@ def render_satis_fiyati_hesaplayici():
                     placeholder="Lütfen bir model seçin..."
                 )
                 
-                # Kullanıcı bir model seçtiyse, o modelin detaylarını al
+                # --- DÜZELTME: Seçim yapıldığında detayları bu blok içinde al ---
                 if secilen_model_kodu:
-                    secilen_urun_detay = sonuclar[sonuclar['Model Kodu'] == secilen_model_kodu].iloc[0]
+                    secilen_urun_detay = sonuclar[sonuclar['Model Kodu'] == secilen_model_kodu].iloc[0].to_dict()
             else:
                 st.warning("Aradığınız kriterlere uygun ürün bulunamadı.")
 
-        if secilen_urun_detay is not None:
+        if secilen_urun_detay: # Değişkenin dolu olup olmadığını kontrol et
             urun = secilen_urun_detay
-            # Seçim yapıldığını göstermek için artık st.success kullanmıyoruz, hesaplama alanı direkt görünecek.
+            # Bu satır artık güvenilir bir şekilde çalışmalı
+            st.success(f"Seçilen ürünün maliyeti (KDV Hariç): {urun['Alış Fiyatı']:,.2f} TL")
             satis_fiyati_kdvli = st.number_input(f"Satış Fiyatı (KDV Dahil) - Seçilen: {urun['Model Kodu']}", min_value=0.0, format="%.2f", key="satis_fiyati_input")
             if st.button("Hesapla", type="primary"):
                 if satis_fiyati_kdvli > 0:

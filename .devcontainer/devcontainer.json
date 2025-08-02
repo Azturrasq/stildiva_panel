@@ -10,7 +10,14 @@
       ]
     },
     "vscode": {
-      "settings": {},
+      "settings": {
+        "python.analysis.extraPaths": [
+          "/home/vscode/.local/lib/python3.11/site-packages"
+        ],
+        "python.autoComplete.extraPaths": [
+          "/home/vscode/.local/lib/python3.11/site-packages"
+        ]
+      },
       "extensions": [
         "ms-python.python",
         "ms-python.vscode-pylance"
