@@ -45,6 +45,36 @@ def get_google_creds():
             st.error(f"Yerel 'secrets.json' dosyası okunurken bir hata oluştu: {e}")
             st.stop()
 
+# --- YENİ: EKSİK OLAN HESAPLAMA FONKSİYONU ---
+def kar_hesapla(satis_fiyati_kdvli, urun_maliyeti, komisyon_orani, kdv_orani, kargo_gideri, reklam_gideri):
+    """
+    Tek bir ürün için satış fiyatına göre kâr, marj ve maliyetleri hesaplar.
+    """
+    if satis_fiyati_kdvli <= 0:
+        return {"net_kar": 0, "kar_marji": 0, "toplam_maliyet": urun_maliyeti}
+
+    # KDV'siz satış fiyatını bul
+    kdv_bolen = 1 + (kdv_orani / 100)
+    satis_fiyati_kdvsiz = satis_fiyati_kdvli / kdv_bolen
+
+    # Giderleri hesapla
+    komisyon_tl = satis_fiyati_kdvli * (komisyon_orani / 100)
+    
+    # Toplam maliyet = Ürünün alış fiyatı + Tüm giderler
+    toplam_maliyet = urun_maliyeti + komisyon_tl + kargo_gideri + reklam_gideri
+
+    # Net kâr = KDV'siz gelir - Toplam maliyet
+    net_kar = satis_fiyati_kdvsiz - toplam_maliyet
+    
+    # Kâr marjı = (Net Kâr / KDV'siz Gelir) * 100
+    kar_marji = (net_kar / satis_fiyati_kdvsiz) * 100 if satis_fiyati_kdvsiz > 0 else 0
+
+    return {
+        "net_kar": net_kar,
+        "kar_marji": kar_marji,
+        "toplam_maliyet": toplam_maliyet
+    }
+
 # --------------------------------------------------------------------------------
 # Sayfa Yapılandırması ve Başlangıç Ayarları
 # --------------------------------------------------------------------------------
@@ -514,46 +544,70 @@ def render_satis_fiyati_hesaplayici():
         st.markdown('<div class="card">', unsafe_allow_html=True)
         st.subheader("📦 Ürün Arama ve Simülasyon")
         df_maliyet = load_cost_data()
-        arama_terimi = st.text_input("Model Kodu ile Ürün Ara", "")
-        secilen_urun_detay = None
 
-        if arama_terimi:
-            # --- GÜNCELLENDİ: Önce 'içerir' mantığıyla ara, sonra seçim yaptır ---
-            df_maliyet['Model Kodu'] = df_maliyet['Model Kodu'].astype(str)
-            sonuclar = df_maliyet[df_maliyet['Model Kodu'].str.contains(arama_terimi, case=False, na=False)]
+        # --- YENİ: Form kullanarak Enter tuşuyla gönderme özelliğini etkinleştirme ---
+        with st.form(key="arama_ve_hesaplama_formu"):
+            arama_terimi = st.text_input("Model Kodu ile Ürün Ara", "")
             
-            if not sonuclar.empty:
-                # Bulunan modelleri kullanıcıya selectbox ile sun
-                secenekler = sonuclar['Model Kodu'].unique()
-                secilen_model_kodu = st.selectbox(
-                    "Bulunan Modeller", 
-                    options=secenekler,
-                    index=None, # Başlangıçta boş olsun
-                    placeholder="Lütfen bir model seçin..."
-                )
-                
-                # --- DÜZELTME: Seçim yapıldığında detayları bu blok içinde al ---
-                if secilen_model_kodu:
-                    secilen_urun_detay = sonuclar[sonuclar['Model Kodu'] == secilen_model_kodu].iloc[0].to_dict()
-            else:
-                st.warning("Aradığınız kriterlere uygun ürün bulunamadı.")
+            secilen_urun_detay = None
+            secilen_model_kodu = None
 
-        if secilen_urun_detay: # Değişkenin dolu olup olmadığını kontrol et
-            urun = secilen_urun_detay
-            # Bu satır artık güvenilir bir şekilde çalışmalı
-            st.success(f"Seçilen ürünün maliyeti (KDV Hariç): {urun['Alış Fiyatı']:,.2f} TL")
-            satis_fiyati_kdvli = st.number_input(f"Satış Fiyatı (KDV Dahil) - Seçilen: {urun['Model Kodu']}", min_value=0.0, format="%.2f", key="satis_fiyati_input")
-            if st.button("Hesapla", type="primary"):
-                if satis_fiyati_kdvli > 0:
-                    kdv_bolen, kdv_carpan = 1 + (st.session_state.tekil_kdv / 100), st.session_state.tekil_kdv / 100
-                    satis_fiyati_kdvsiz = satis_fiyati_kdvli / kdv_bolen
-                    net_odenecek_kdv = (satis_fiyati_kdvli - satis_fiyati_kdvsiz) - (urun['Alış Fiyatı'] * kdv_carpan)
-                    komisyon_tl = satis_fiyati_kdvli * (st.session_state.tekil_komisyon / 100)
-                    net_kar = (satis_fiyati_kdvsiz - urun['Alış Fiyatı'] - net_odenecek_kdv - komisyon_tl - st.session_state.tekil_kargo - st.session_state.tekil_reklam)
-                    st.subheader("Sonuç"); res_col1, res_col2, res_col3 = st.columns(3)
-                    res_col1.metric("Net Kâr", f"{net_kar:,.2f} TL")
-                    res_col2.metric("Kâr Marjı", f"{(net_kar / satis_fiyati_kdvli * 100) if satis_fiyati_kdvli > 0 else 0:.2f}%")
-                    res_col3.metric("Net Ödenecek KDV", f"{net_odenecek_kdv:,.2f} TL")
+            if arama_terimi:
+                df_maliyet['Model Kodu'] = df_maliyet['Model Kodu'].astype(str)
+                sonuclar = df_maliyet[df_maliyet['Model Kodu'].str.contains(arama_terimi, case=False, na=False)]
+                
+                if not sonuclar.empty:
+                    secenekler = sonuclar['Model Kodu'].unique()
+                    
+                    # --- GÜNCELLENDİ: Eğer tek bir sonuç varsa, otomatik olarak seç ---
+                    if len(secenekler) == 1:
+                        secilen_model_kodu = secenekler[0]
+                        st.selectbox("Bulunan Modeller", options=secenekler, index=0, disabled=True)
+                    else:
+                        # Birden fazla sonuç varsa, kullanıcıya seçtir
+                        secilen_model_kodu = st.selectbox(
+                            "Bulunan Modeller", 
+                            options=secenekler,
+                            index=None,
+                            placeholder="Lütfen bir model seçin..."
+                        )
+                    
+                    if secilen_model_kodu:
+                        secilen_urun_detay = sonuclar[sonuclar['Model Kodu'] == secilen_model_kodu].iloc[0].to_dict()
+                else:
+                    st.warning("Aradığınız kriterlere uygun ürün bulunamadı.")
+
+            if secilen_urun_detay:
+                urun = secilen_urun_detay
+                st.success(f"Seçilen ürünün maliyeti (KDV Hariç): {urun['Alış Fiyatı']:,.2f} TL")
+                satis_fiyati_kdvli = st.number_input(f"Satış Fiyatı (KDV Dahil) - Seçilen: {urun['Model Kodu']}", min_value=0.0, format="%.2f", key="satis_fiyati_input")
+            
+            # Formun gönderim butonu. Enter'a basıldığında bu tetiklenir.
+            hesapla_butonu = st.form_submit_button("Hesapla", type="primary")
+
+        # Form gönderildikten sonra hesaplama mantığı burada çalışır
+        if hesapla_butonu and 'satis_fiyati_kdvli' in locals() and satis_fiyati_kdvli > 0:
+            # ... (Mevcut hesaplama kodunuz buraya gelecek) ...
+            # Örnek olarak mevcut kodunuzdan bir parça:
+            kdv_orani = st.session_state.get('tekil_kdv', 10.0)
+            komisyon_orani = st.session_state.get('tekil_komisyon', 21.5)
+            kargo_gideri = st.session_state.get('tekil_kargo', 80.0)
+            reklam_gideri = st.session_state.get('tekil_reklam', 0.0)
+            urun_maliyeti = secilen_urun_detay['Alış Fiyatı']
+
+            # Hesaplama fonksiyonunu çağır
+            sonuclar = kar_hesapla(
+                satis_fiyati_kdvli, urun_maliyeti, komisyon_orani, 
+                kdv_orani, kargo_gideri, reklam_gideri
+            )
+            
+            # Sonuçları göster
+            st.subheader("Sonuç")
+            res_col1, res_col2, res_col3 = st.columns(3)
+            res_col1.metric("Net Kâr (TL)", f"{sonuclar['net_kar']:,.2f} TL")
+            res_col2.metric("Kâr Marjı (%)", f"{sonuclar['kar_marji']:.2f}%")
+            res_col3.metric("Net Maliyet (TL)", f"{sonuclar['toplam_maliyet']:,.2f} TL")
+
         st.markdown('</div>', unsafe_allow_html=True)
 
 def render_toptan_fiyat_teklifi():
