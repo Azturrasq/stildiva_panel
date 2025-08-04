@@ -531,11 +531,10 @@ def render_satis_fiyati_hesaplayici():
     with left_col:
         st.markdown('<div class="card">', unsafe_allow_html=True)
         st.subheader("⚙️ Varsayılan Maliyetler")
-        if 'tekil_komisyon' not in st.session_state: st.session_state.tekil_komisyon = 21.5
+        # --- GÜNCELLENDİ: Komisyon oranı buradan kaldırıldı ---
         if 'tekil_kdv' not in st.session_state: st.session_state.tekil_kdv = 10.0
         if 'tekil_kargo' not in st.session_state: st.session_state.tekil_kargo = 80.0
         if 'tekil_reklam' not in st.session_state: st.session_state.tekil_reklam = 0.0
-        st.session_state.tekil_komisyon = st.number_input("Komisyon Oranı (%)", min_value=0.0, value=st.session_state.tekil_komisyon, key='s_kom')
         st.session_state.tekil_kdv = st.number_input("KDV Oranı (%)", min_value=0.0, value=st.session_state.tekil_kdv, key='s_kdv')
         st.session_state.tekil_kargo = st.number_input("Kargo Gideri (TL)", min_value=0.0, value=st.session_state.tekil_kargo, key='s_kar')
         st.session_state.tekil_reklam = st.number_input("Reklam Gideri (TL)", min_value=0.0, value=st.session_state.tekil_reklam, key='s_rek')
@@ -559,12 +558,10 @@ def render_satis_fiyati_hesaplayici():
                 if not sonuclar.empty:
                     secenekler = sonuclar['Model Kodu'].unique()
                     
-                    # --- GÜNCELLENDİ: Eğer tek bir sonuç varsa, otomatik olarak seç ---
                     if len(secenekler) == 1:
                         secilen_model_kodu = secenekler[0]
                         st.selectbox("Bulunan Modeller", options=secenekler, index=0, disabled=True)
                     else:
-                        # Birden fazla sonuç varsa, kullanıcıya seçtir
                         secilen_model_kodu = st.selectbox(
                             "Bulunan Modeller", 
                             options=secenekler,
@@ -581,27 +578,25 @@ def render_satis_fiyati_hesaplayici():
                 urun = secilen_urun_detay
                 st.success(f"Seçilen ürünün maliyeti (KDV Hariç): {urun['Alış Fiyatı']:,.2f} TL")
                 satis_fiyati_kdvli = st.number_input(f"Satış Fiyatı (KDV Dahil) - Seçilen: {urun['Model Kodu']}", min_value=0.0, format="%.2f", key="satis_fiyati_input")
+                
+                # --- GÜNCELLENDİ: Komisyon oranı buraya taşındı ---
+                if 'tekil_komisyon' not in st.session_state: st.session_state.tekil_komisyon = 21.5
+                st.session_state.tekil_komisyon = st.number_input("Komisyon Oranı (%)", min_value=0.0, value=st.session_state.tekil_komisyon, key='s_kom')
             
-            # Formun gönderim butonu. Enter'a basıldığında bu tetiklenir.
             hesapla_butonu = st.form_submit_button("Hesapla", type="primary")
 
-        # Form gönderildikten sonra hesaplama mantığı burada çalışır
         if hesapla_butonu and 'satis_fiyati_kdvli' in locals() and satis_fiyati_kdvli > 0:
-            # ... (Mevcut hesaplama kodunuz buraya gelecek) ...
-            # Örnek olarak mevcut kodunuzdan bir parça:
             kdv_orani = st.session_state.get('tekil_kdv', 10.0)
             komisyon_orani = st.session_state.get('tekil_komisyon', 21.5)
             kargo_gideri = st.session_state.get('tekil_kargo', 80.0)
             reklam_gideri = st.session_state.get('tekil_reklam', 0.0)
             urun_maliyeti = secilen_urun_detay['Alış Fiyatı']
 
-            # Hesaplama fonksiyonunu çağır
             sonuclar = kar_hesapla(
                 satis_fiyati_kdvli, urun_maliyeti, komisyon_orani, 
                 kdv_orani, kargo_gideri, reklam_gideri
             )
             
-            # Sonuçları göster
             st.subheader("Sonuç")
             res_col1, res_col2, res_col3 = st.columns(3)
             res_col1.metric("Net Kâr (TL)", f"{sonuclar['net_kar']:,.2f} TL")
