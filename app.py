@@ -536,11 +536,11 @@ def render_toptan_fiyat_teklifi():
             if hedef_tipi == "% Kâr Marjı":
                 hedef_kar_marji = hedef_deger / 100
                 pay = alis_fiyati_kdvsiz - alis_kdv_tutari
-                payda = 1 - (komisyon_orani / 100 * kdv_bolen) - kdv_carpan - hedef_kar_marji
+                payda = 1 - hedef_kar_marji - (kdv_bolen * (komisyon_orani/100)) - kdv_carpan
             else: # Hedef Net Kâr (TL)
                 hedef_net_kar = hedef_deger
                 pay = alis_fiyati_kdvsiz - alis_kdv_tutari + hedef_net_kar
-                payda = 1 - (komisyon_orani / 100 * kdv_bolen) - kdv_carpan
+                payda = 1 - (kdv_bolen * (komisyon_orani / 100)) - kdv_carpan
 
             if payda <= 0:
                 st.error("Bu hedefe ulaşılamıyor. Lütfen komisyon veya kâr hedefini düşürün.")
@@ -629,22 +629,25 @@ def render_yeni_urun_sihirbazi():
             # --- DÜZELTME: Hedefe göre fiyat bulma mantığı eklendi ---
             if hesaplama_tipi == "Hedefe Göre Satış Fiyatı Bul":
                 sabit_giderler = alis_fiyati_kdvsiz + kargo_gideri + reklam_gideri
-                alis_kdv_tutari = alis_fiyati_kdvsiz * kdv_carpan
-
+                
+                # --- DÜZELTME: Kâr marjı hesaplama denklemi düzeltildi ---
                 if hedef_tipi == "% Kâr Marjı":
                     hedef_kar_marji = hedef_deger / 100
-                    pay = sabit_giderler - alis_kdv_tutari
-                    payda = (1/kdv_bolen) - (komisyon_orani/100) - (1 - 1/kdv_bolen) - hedef_kar_marji
+                    # SF_kdvsiz = (sabit_giderler - (alis_fiyati_kdvsiz * kdv_carpan)) / (1 - hedef_kar_marji - (kdv_bolen * (komisyon_orani/100)) - kdv_carpan)
+                    pay = sabit_giderler - (alis_fiyati_kdvsiz * kdv_carpan)
+                    payda = 1 - hedef_kar_marji - (kdv_bolen * (komisyon_orani / 100)) - kdv_carpan
                 else: # Hedef Net Kâr (TL)
                     hedef_net_kar = hedef_deger
-                    pay = sabit_giderler - alis_kdv_tutari + hedef_net_kar
-                    payda = (1/kdv_bolen) - (komisyon_orani/100) - (1 - 1/kdv_bolen)
+                    # SF_kdvsiz = (sabit_giderler - (alis_fiyati_kdvsiz * kdv_carpan) + hedef_net_kar) / (1 - (kdv_bolen * (komisyon_orani/100)) - kdv_carpan)
+                    pay = sabit_giderler - (alis_fiyati_kdvsiz * kdv_carpan) + hedef_net_kar
+                    payda = 1 - (kdv_bolen * (komisyon_orani / 100)) - kdv_carpan
 
                 if payda <= 0:
                     st.error("Bu hedefe ulaşılamıyor. Lütfen komisyon veya kâr hedefini düşürün.")
                     satis_fiyati_kdvli = 0
                 else:
-                    satis_fiyati_kdvli = pay / payda
+                    satis_fiyati_kdvsiz = pay / payda
+                    satis_fiyati_kdvli = satis_fiyati_kdvsiz * kdv_bolen
             
             else: # Satış Fiyatına Göre Kâr Hesapla
                 satis_fiyati_kdvli = satis_fiyati_input
