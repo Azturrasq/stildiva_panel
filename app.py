@@ -605,6 +605,68 @@ def render_satis_fiyati_hesaplayici():
 
         st.markdown('</div>', unsafe_allow_html=True)
 
+# --- EKSİK FONKSİYON BURAYA EKLENİYOR ---
+def render_toptan_fiyat_teklifi():
+    st.title("📑 Toptan Fiyat Teklifi Oluşturucu")
+    df_maliyet = load_cost_data()
+
+    with st.container():
+        st.markdown('<div class="card">', unsafe_allow_html=True)
+        st.subheader("Ürün Seçimi ve Adet Belirleme")
+        
+        if 'teklif_listesi' not in st.session_state:
+            st.session_state.teklif_listesi = []
+
+        options = df_maliyet['Model Kodu'].unique()
+        secilen_model = st.selectbox("Teklife Eklenecek Ürünü Seçin", options, index=None, placeholder="Model Kodu seçin...")
+
+        if secilen_model:
+            secilen_adet = st.number_input(f"'{secilen_model}' için adet girin", min_value=1, value=10, step=1)
+            if st.button("➕ Ürünü Teklife Ekle", key=f"ekle_{secilen_model}"):
+                urun_detay = df_maliyet[df_maliyet['Model Kodu'] == secilen_model].iloc[0]
+                st.session_state.teklif_listesi.append({
+                    "Model Kodu": urun_detay['Model Kodu'],
+                    "Adet": secilen_adet,
+                    "Birim Maliyet": urun_detay['Alış Fiyatı']
+                })
+                st.success(f"{secilen_adet} adet '{secilen_model}' teklife eklendi.")
+
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    if st.session_state.teklif_listesi:
+        with st.container():
+            st.markdown('<div class="card">', unsafe_allow_html=True)
+            st.subheader("Fiyatlandırma ve Teklif Detayları")
+            
+            df_teklif = pd.DataFrame(st.session_state.teklif_listesi)
+            
+            kar_marji = st.slider("Uygulanacak Kâr Marjı (%)", 0.0, 200.0, 50.0)
+            
+            df_teklif['Birim Satış Fiyatı (KDV Hariç)'] = df_teklif['Birim Maliyet'] / (1 - (kar_marji / 100))
+            df_teklif['Toplam Fiyat (KDV Hariç)'] = df_teklif['Birim Satış Fiyatı (KDV Hariç)'] * df_teklif['Adet']
+            
+            st.dataframe(df_teklif)
+            
+            toplam_teklif_tutari = df_teklif['Toplam Fiyat (KDV Hariç)'].sum()
+            st.metric("Teklif Ara Toplam (KDV Hariç)", f"{toplam_teklif_tutari:,.2f} TL")
+
+            if st.button("🗑️ Teklif Listesini Temizle"):
+                st.session_state.teklif_listesi = []
+                st.rerun()
+
+            # Excel'e aktarma
+            output = io.BytesIO()
+            with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+                df_teklif.to_excel(writer, index=False, sheet_name='Toptan_Teklif')
+                writer.close()
+            
+            st.download_button(
+                label="✅ Fiyat Listesini Excel Olarak İndir",
+                data=output.getvalue(),
+                file_name='Toptan_Fiyat_Teklifi.xlsx'
+            )
+            st.markdown('</div>', unsafe_allow_html=True)
+
 # --- YENİ VE HESAPLAMASI DÜZELTİLMİŞ SİHİRBAZ FONKSİYONU ---
 def render_yeni_urun_sihirbazi():
     st.title("🧙‍♂️ Yeni Ürün Satış Fiyatı Sihirbazı")
