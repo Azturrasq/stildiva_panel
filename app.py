@@ -521,10 +521,13 @@ def render_toptan_fiyat_teklifi():
                 hedef_deger = st.number_input("Hedef Net Kâr (TL)", min_value=0.0, value=100.0, step=1.0, key="toptan_hedef_deger_tutar")
 
         if st.button("Fiyat Listesini Oluştur", type="primary", use_container_width=True):
+            # --- DÜZELTME: Sadece benzersiz model kodları ile çalış ---
+            df_hesaplama = df_maliyet.drop_duplicates(subset=['Model Kodu']).copy()
+
             kdv_carpan = urun_kdv_orani / 100
             kdv_bolen = 1 + kdv_carpan
             
-            alis_fiyati_kdvsiz = df_maliyet['Alış Fiyatı']
+            alis_fiyati_kdvsiz = df_hesaplama['Alış Fiyatı']
             alis_kdv_tutari = alis_fiyati_kdvsiz * kdv_carpan
             
             if hedef_tipi == "% Kâr Marjı":
@@ -540,27 +543,35 @@ def render_toptan_fiyat_teklifi():
                 st.error("Bu hedefe ulaşılamıyor. Lütfen komisyon veya kâr hedefini düşürün.")
             else:
                 satis_fiyati_kdvsiz = pay / payda
-                df_maliyet['Hesaplanan Satış Fiyatı (KDV Dahil)'] = satis_fiyati_kdvsiz * kdv_bolen
+                satis_fiyati_kdvli = satis_fiyati_kdvsiz * kdv_bolen
                 
-                sonuclar = df_maliyet.apply(
+                # --- DÜZELTME: İstenen sütunlarla yeni bir sonuç DataFrame'i oluştur ---
+                df_sonuc = pd.DataFrame({
+                    'Model Kodu': df_hesaplama['Model Kodu'],
+                    'Alış Fiyatı (KDV Hariç)': df_hesaplama['Alış Fiyatı'],
+                    'Satış Fiyatı (KDV Hariç)': satis_fiyati_kdvsiz,
+                    'Satış Fiyatı (KDV Dahil)': satis_fiyati_kdvli
+                })
+
+                kar_sonuclari = df_sonuc.apply(
                     lambda row: kar_hesapla(
-                        row['Hesaplanan Satış Fiyatı (KDV Dahil)'], 
-                        row['Alış Fiyatı'], 
+                        row['Satış Fiyatı (KDV Dahil)'], 
+                        row['Alış Fiyatı (KDV Hariç)'], 
                         komisyon_orani, urun_kdv_orani, 0, 0
                     ), axis=1, result_type='expand'
                 )
-                sonuclar.columns = ['Gerçekleşen Net Kâr', 'Gerçekleşen Kâr Marjı', 'Toplam Maliyet']
+                kar_sonuclari.columns = ['Net Kar', 'Kar Marjı', 'Toplam Maliyet']
                 
-                df_sonuc = pd.concat([df_maliyet, sonuclar], axis=1)
+                df_sonuc = pd.concat([df_sonuc, kar_sonuclari[['Net Kar', 'Kar Marjı']]], axis=1)
 
                 st.subheader("Oluşturulan Fiyat Listesi")
                 st.dataframe(
-                    df_sonuc[['Model Kodu', 'Alış Fiyatı', 'Hesaplanan Satış Fiyatı (KDV Dahil)', 'Gerçekleşen Net Kâr', 'Gerçekleşen Kâr Marjı']]
-                    .style.format({
-                        'Alış Fiyatı': '{:,.2f} TL',
-                        'Hesaplanan Satış Fiyatı (KDV Dahil)': '{:,.2f} TL',
-                        'Gerçekleşen Net Kâr': '{:,.2f} TL',
-                        'Gerçekleşen Kâr Marjı': '{:.2f}%'
+                    df_sonuc.style.format({
+                        'Alış Fiyatı (KDV Hariç)': '{:,.2f} TL',
+                        'Satış Fiyatı (KDV Hariç)': '{:,.2f} TL',
+                        'Satış Fiyatı (KDV Dahil)': '{:,.2f} TL',
+                        'Net Kar': '{:,.2f} TL',
+                        'Kar Marjı': '{:.2f}%'
                     }),
                     use_container_width=True
                 )
