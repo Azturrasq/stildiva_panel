@@ -686,8 +686,7 @@ if st.session_state["authentication_status"]:
             label_visibility="collapsed"
         )
 
-    # CSS enjeksiyonu ve sayfa yönlendirme
-    inject_custom_css()
+    # --- HATA DÜZELTME: Olmayan CSS fonksiyonu çağrısı kaldırıldı ---
     page_map = {
         "Kârlılık Analizi": render_karlilik_analizi,
         "Toptan Fiyat Teklifi": render_toptan_fiyat_teklifi,
