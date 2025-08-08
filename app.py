@@ -16,39 +16,7 @@ import gspread
 # YARDIMCI FONKSİYONLAR
 # ==============================================================================
 
-def load_css(file_name="style.css"):
-    """Harici CSS dosyasını yükler."""
-    try:
-        with open(file_name) as f:
-            st.markdown(f'<style>{f.read()}</style>', unsafe_allow_html=True)
-    except FileNotFoundError:
-        st.error(f"Tasarım dosyası '{file_name}' bulunamadı. Lütfen dosyanın ana dizinde olduğundan emin olun.")
-
-def dynamic_select(label, state_key, defaults=[]):
-    """Kullanıcının listeye yeni öğe eklemesine/kaldırmasına olanak tanıyan dinamik selectbox."""
-    if state_key not in st.session_state:
-        st.session_state[state_key] = defaults
-    
-    options = st.session_state[state_key]
-    selection = st.selectbox(label, options, help="Mevcut seçeneklerden birini seçin veya aşağıdan yenisini ekleyin/kaldırın.")
-    
-    with st.expander(f"'{label}' listesini düzenle"):
-        col1, col2 = st.columns([2, 1])
-        with col1:
-            new_item = st.text_input("Yeni Değer Ekle", placeholder="Yeni değeri yazıp Enter'a basın", key=f"input_{state_key}", label_visibility="collapsed")
-            if new_item and new_item.strip() and new_item.strip() not in options:
-                st.session_state[state_key].append(new_item.strip())
-                st.rerun()
-        
-        with col2:
-            item_to_remove = st.selectbox("Değer Kaldır", [""] + options, index=0, key=f"remove_{state_key}", label_visibility="collapsed")
-            if item_to_remove:
-                st.session_state[state_key].remove(item_to_remove)
-                st.rerun()
-    return selection
-
 def get_google_creds():
-    """Streamlit Cloud ve yerel ortam için kimlik doğrulaması yapar."""
     scopes = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
     try:
         creds_dict = st.secrets["gcp_service_account"]
@@ -64,11 +32,10 @@ def get_google_creds():
 
 @st.cache_data(ttl=600)
 def load_cost_data_from_gsheets(_gc):
-    """Maliyet verilerini Google Sheets'ten çeker ve cache'ler."""
     try:
         workbook = _gc.open("maliyet_referans")
         worksheet = workbook.worksheet("Sayfa1")
-        df = get_as_dataframe(worksheet, evaluate_formulas=True, usecols=lambda x: x not in ['Ürün Adı'])
+        df = get_as_dataframe(worksheet, evaluate_formulas=True)
         df['Barkod'] = df['Barkod'].astype(str).str.replace(r'\.0$', '', regex=True).str.strip()
         df['Model Kodu'] = df['Model Kodu'].astype(str).str.strip()
         df['Alış Fiyatı'] = pd.to_numeric(df['Alış Fiyatı'], errors='coerce')
@@ -78,13 +45,34 @@ def load_cost_data_from_gsheets(_gc):
         return pd.DataFrame()
 
 def load_cost_data():
-    """Google Sheets bağlantısını yönetir ve veri yükler."""
     if 'gc' not in st.session_state:
         st.session_state.gc = get_google_creds()
-    return load_cost_data_from_gsheets(st.session_state.gc)
+    st.session_state.df_maliyet = load_cost_data_from_gsheets(st.session_state.gc)
+
+# --- HATA DÜZELTME: EKSİK OLAN KÂR HESAPLAMA FONKSİYONU ---
+def kar_hesapla(satis_fiyati_kdvli, alis_fiyati_kdvsiz, komisyon_orani, kdv_orani, kargo_gideri, reklam_gideri):
+    """Tek bir ürün için kâr hesaplaması yapar."""
+    kdv_bolen = 1 + (kdv_orani / 100)
+    kdv_carpan = kdv_orani / 100
+    
+    satis_fiyati_kdvsiz = satis_fiyati_kdvli / kdv_bolen
+    satis_kdv_tutari = satis_fiyati_kdvli - satis_fiyati_kdvsiz
+    alis_kdv_tutari = alis_fiyati_kdvsiz * kdv_carpan
+    net_odenecek_kdv = satis_kdv_tutari - alis_kdv_tutari
+    komisyon_tutari = satis_fiyati_kdvli * (komisyon_orani / 100)
+    
+    toplam_maliyet = alis_fiyati_kdvsiz + kargo_gideri + reklam_gideri + komisyon_tutari + net_odenecek_kdv
+    net_kar = satis_fiyati_kdvsiz - toplam_maliyet
+    kar_marji = (net_kar / satis_fiyati_kdvsiz) * 100 if satis_fiyati_kdvsiz > 0 else 0
+    
+    return {
+        'net_kar': net_kar, 
+        'kar_marji': kar_marji, 
+        'toplam_maliyet': toplam_maliyet
+    }
 
 # ==============================================================================
-# SAYFA RENDER FONKSİYONLARI (TÜM MODÜLLER)
+# SAYFA RENDER FONKSİYONLARI
 # ==============================================================================
 
 def render_karlilik_analizi():
