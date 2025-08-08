@@ -500,6 +500,94 @@ def render_toptan_fiyat_teklifi():
                 )
         st.markdown('</div>', unsafe_allow_html=True)
 
+# --- YENİ: KAMPANYA FİYATI HESAPLAMA MODÜLÜ ---
+def render_kampanya_fiyati():
+    st.title("🏷️ Kampanya Fiyatı Kârlılık Hesaplayıcı")
+    load_cost_data()
+    df_maliyet = st.session_state.df_maliyet
+
+    if df_maliyet.empty:
+        st.error("Maliyet verileri yüklenemedi. Lütfen Google Sheets bağlantınızı veya 'Maliyet Yönetimi' sayfasını kontrol edin.")
+        return
+
+    # Ürün Arama
+    st.markdown('<div class="card">', unsafe_allow_html=True)
+    st.subheader("📦 Ürün Bul")
+    search_term = st.text_input("Aramak için Model Kodu veya Barkod girin", key="kampanya_search_term")
+
+    if search_term:
+        # Hem model kodunda hem barkodda ara
+        results = df_maliyet[
+            df_maliyet['Model Kodu'].str.contains(search_term, case=False, na=False) |
+            df_maliyet['Barkod'].str.contains(search_term, case=False, na=False)
+        ]
+
+        if not results.empty:
+            if len(results) == 1:
+                st.session_state.selected_product_kampanya = results.iloc[0]
+                st.success(f"Ürün bulundu ve seçildi: **{st.session_state.selected_product_kampanya['Model Kodu']}**")
+            else:
+                # Birden fazla sonuç varsa seçtir
+                results['display'] = results['Model Kodu'] + " (" + results['Barkod'] + ")"
+                secim = st.selectbox(
+                    "Birden fazla sonuç bulundu, lütfen birini seçin:",
+                    options=results['display'],
+                    index=None, # Başlangıçta boş olsun
+                    key="kampanya_product_select"
+                )
+                if secim:
+                    selected_index = results[results['display'] == secim].index[0]
+                    st.session_state.selected_product_kampanya = df_maliyet.loc[selected_index]
+        else:
+            st.warning("Bu arama kriterine uygun ürün bulunamadı.")
+            if 'selected_product_kampanya' in st.session_state:
+                del st.session_state['selected_product_kampanya']
+
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    # Seçilen ürün varsa hesaplama formunu göster
+    if 'selected_product_kampanya' in st.session_state:
+        urun = st.session_state.selected_product_kampanya
+        st.markdown('<div class="card">', unsafe_allow_html=True)
+        st.subheader(f"Hesaplama: {urun['Model Kodu']}")
+        
+        col1, col2 = st.columns(2)
+        col1.info(f"Mevcut Alış Fiyatı: **{urun['Alış Fiyatı']:,.2f} TL** (KDV Hariç)")
+        
+        with st.form("kampanya_hesaplama_formu"):
+            f_col1, f_col2, f_col3 = st.columns(3)
+            kampanya_fiyati = f_col1.number_input("Kampanya Satış Fiyatı (KDV Dahil)", min_value=0.01, step=1.0)
+            komisyon_orani = f_col2.number_input("Komisyon Oranı (%)", min_value=0.0, value=21.5, step=0.1)
+            urun_kdv_orani = f_col3.number_input("Ürün KDV Oranı (%)", min_value=0.0, value=10.0, step=1.0)
+            
+            submitted = st.form_submit_button("Hesapla", type="primary", use_container_width=True)
+
+            if submitted:
+                sonuclar = kar_hesapla(
+                    satis_fiyati_kdvli=kampanya_fiyati,
+                    alis_fiyati_kdvsiz=urun['Alış Fiyatı'],
+                    komisyon_orani=komisyon_orani,
+                    kdv_orani=urun_kdv_orani,
+                    kargo_gideri=80.0, # Varsayılan veya ayarlanabilir bir değer
+                    reklam_gideri=0.0 # Varsayılan veya ayarlanabilir bir değer
+                )
+                
+                net_kar = sonuclar['net_kar']
+                kar_marji = sonuclar['kar_marji']
+
+                st.subheader("Sonuç")
+                if net_kar > 0:
+                    st.success("Bu satıştan kâr ediyorsunuz.")
+                else:
+                    st.error("Bu satıştan zarar ediyorsunuz.")
+                
+                res_col1, res_col2 = st.columns(2)
+                res_col1.metric("Net Kâr / Zarar", f"{net_kar:,.2f} TL")
+                res_col2.metric("Kâr Marjı", f"{kar_marji:.2f}%")
+
+        st.markdown('</div>', unsafe_allow_html=True)
+
+
 # --- YENİ VE EXCEL İLE UYUMLU SİHİRBAZ FONKSİYONU ---
 def render_yeni_urun_sihirbazi():
     st.title("🧙‍♂️ Yeni Ürün Satış Fiyatı Sihirbazı")
@@ -637,7 +725,7 @@ if st.session_state["authentication_status"]:
         st.subheader("Sihirbazlar")
         app_mode = st.selectbox(
             "Hangi aracı kullanmak istersiniz?",
-            ["🧙‍♂️ Yeni Ürün Sihirbazı", "Toptan Fiyat Teklifi", "Kârlılık Analizi", "Aylık Hedef Analizi", "Maliyet Yönetimi"],
+            ["Kârlılık Analizi", "Maliyet Yönetimi", "Aylık Hedef Analizi", "Toptan Fiyat Teklifi", "🧙‍♂️ Yeni Ürün Sihirbazı", "🏷️ Kampanya Fiyatı"],
             label_visibility="collapsed"
         )
 
@@ -647,7 +735,8 @@ if st.session_state["authentication_status"]:
         "Toptan Fiyat Teklifi": render_toptan_fiyat_teklifi,
         "Aylık Hedef Analizi": render_hedef_analizi,
         "Maliyet Yönetimi": render_maliyet_yonetimi,
-        "🧙‍♂️ Yeni Ürün Sihirbazı": render_yeni_urun_sihirbazi
+        "🧙‍♂️ Yeni Ürün Sihirbazı": render_yeni_urun_sihirbazi,
+        "🏷️ Kampanya Fiyatı": render_kampanya_fiyati
     }
     page_map[app_mode]()
 
