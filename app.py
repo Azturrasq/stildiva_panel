@@ -641,6 +641,91 @@ def render_toptan_fiyat_teklifi():
             st.download_button(label="✅ Fiyat Listesini Excel Olarak İndir", data=output.getvalue(), file_name='Toptan_Fiyat_Teklifi.xlsx')
             st.markdown('</div>', unsafe_allow_html=True)
 
+# --- YENİ SİHİRBAZ FONKSİYONU BURAYA EKLENİYOR ---
+def render_yeni_urun_sihirbazi():
+    st.title("🧙‍♂️ Yeni Ürün Satış Fiyatı Sihirbazı")
+
+    with st.container():
+        st.markdown('<div class="card">', unsafe_allow_html=True)
+        
+        col1, col2 = st.columns(2)
+
+        with col1:
+            st.subheader("📊 Maliyet Girdileri")
+            alis_fiyati_input = st.number_input("Ürün Alış Fiyatı (TL)", min_value=0.0, step=0.01, key="sihirbaz_alis")
+            kdv_durumu = st.radio("Alış Fiyatı KDV Durumu", ["KDV Dahil", "KDV Hariç"], horizontal=True, key="sihirbaz_kdv_durum")
+            satis_kdv_orani = st.number_input("Satış KDV Oranı (%)", min_value=0.0, value=10.0, step=1.0, key="sihirbaz_kdv")
+            kargo_gideri = st.number_input("Kargo Gideri (TL)", min_value=0.0, value=80.0, step=0.5, key="sihirbaz_kargo")
+            reklam_gideri = st.number_input("Birim Reklam Gideri (TL)", min_value=0.0, value=0.0, step=0.1, key="sihirbaz_reklam")
+
+        with col2:
+            st.subheader("🎯 Hedef Belirleme")
+            hesaplama_tipi = st.radio(
+                "Hesaplama Yönü Seçin",
+                ["Hedefe Göre Satış Fiyatı Bul", "Satış Fiyatına Göre Kâr Hesapla"],
+                key="sihirbaz_hesaplama_tipi"
+            )
+
+            # Dinamik olarak gösterilecek alanlar
+            if hesaplama_tipi == "Hedefe Göre Satış Fiyatı Bul":
+                hedef_tipi = st.selectbox("Hedef Türü", ["% Kâr Marjı", "Net Kâr Tutarı (TL)"], key="sihirbaz_hedef_tipi")
+                if hedef_tipi == "% Kâr Marjı":
+                    hedef_deger = st.number_input("Hedef Kâr Marjı (%)", min_value=0.0, max_value=99.9, value=25.0, step=0.5, key="sihirbaz_hedef_marj")
+                else: # Net Kâr Tutarı (TL)
+                    hedef_deger = st.number_input("Hedef Net Kâr (TL)", min_value=0.0, value=100.0, step=1.0, key="sihirbaz_hedef_tutar")
+            else: # Satış Fiyatına Göre Kâr Hesapla
+                satis_fiyati_input = st.number_input("Satış Fiyatı (KDV Dahil)", min_value=0.01, step=0.01, key="sihirbaz_satis_fiyati")
+
+        if st.button("🔮 Sihirbazı Çalıştır", type="primary", use_container_width=True):
+            # --- HESAPLAMA MANTIĞI ---
+            # 1. KDV'siz alış fiyatını bul
+            if kdv_durumu == "KDV Dahil":
+                # Not: Alış KDV'si bilinmediğinden, satış KDV oranı baz alınarak geri hesaplama yapılıyor.
+                alis_fiyati_kdvsiz = alis_fiyati_input / (1 + satis_kdv_orani / 100)
+            else:
+                alis_fiyati_kdvsiz = alis_fiyati_input
+            
+            # 2. Toplam maliyeti (KDV'siz alış fiyatı + diğer giderler) hesapla
+            toplam_maliyet_kdvsiz = alis_fiyati_kdvsiz + kargo_gideri + reklam_gideri
+
+            if hesaplama_tipi == "Hedefe Göre Satış Fiyatı Bul":
+                if hedef_tipi == "% Kâr Marjı":
+                    if hedef_deger >= 100:
+                        st.error("Kâr marjı %100'den küçük olmalıdır.")
+                        st.stop()
+                    satis_fiyati_kdvsiz = toplam_maliyet_kdvsiz / (1 - hedef_deger / 100)
+                else: # Net Kâr Tutarı (TL)
+                    satis_fiyati_kdvsiz = toplam_maliyet_kdvsiz + hedef_deger
+                
+                satis_fiyati_kdvli = satis_fiyati_kdvsiz * (1 + satis_kdv_orani / 100)
+                net_kar = satis_fiyati_kdvsiz - toplam_maliyet_kdvsiz
+                kar_marji = (net_kar / satis_fiyati_kdvsiz) * 100 if satis_fiyati_kdvsiz > 0 else 0
+
+                st.subheader("Sonuç")
+                st.success(f"Hedeflerinize ulaşmak için önerilen satış fiyatı:")
+                res_col1, res_col2, res_col3 = st.columns(3)
+                res_col1.metric("Önerilen Satış Fiyatı (KDV Dahil)", f"{satis_fiyati_kdvli:,.2f} TL")
+                res_col2.metric("Elde Edilecek Net Kâr", f"{net_kar:,.2f} TL")
+                res_col3.metric("Gerçekleşen Kâr Marjı", f"{kar_marji:.2f}%")
+
+            else: # Satış Fiyatına Göre Kâr Hesapla
+                satis_fiyati_kdvsiz = satis_fiyati_input / (1 + satis_kdv_orani / 100)
+                net_kar = satis_fiyati_kdvsiz - toplam_maliyet_kdvsiz
+                kar_marji = (net_kar / satis_fiyati_kdvsiz) * 100 if satis_fiyati_kdvsiz > 0 else 0
+
+                st.subheader("Sonuç")
+                if net_kar > 0:
+                    st.success("Bu satıştan kâr ediyorsunuz.")
+                else:
+                    st.error("Bu satıştan zarar ediyorsunuz.")
+                
+                res_col1, res_col2, res_col3 = st.columns(3)
+                res_col1.metric("Satış Fiyatı (KDV Dahil)", f"{satis_fiyati_input:,.2f} TL")
+                res_col2.metric("Net Kâr / Zarar", f"{net_kar:,.2f} TL")
+                res_col3.metric("Kâr Marjı", f"{kar_marji:.2f}%")
+
+        st.markdown('</div>', unsafe_allow_html=True)
+
 # --- KULLANICI GİRİŞİ ---
 # config.yaml dosyasını oku (Streamlit Cloud'da kök dizinde olmalı)
 with open('config.yaml') as file:
@@ -677,7 +762,7 @@ if st.session_state["authentication_status"]:
         st.subheader("Sihirbazlar")
         app_mode = st.selectbox(
             "Hangi aracı kullanmak istersiniz?",
-            ["Kârlılık Analizi", "Toptan Fiyat Teklifi", "Satış Fiyatı Hesaplayıcı", "Aylık Hedef Analizi", "Maliyet Yönetimi"],
+            ["Kârlılık Analizi", "Toptan Fiyat Teklifi", "Satış Fiyatı Hesaplayıcı", "Aylık Hedef Analizi", "Maliyet Yönetimi", "🧙‍♂️ Yeni Ürün Sihirbazı"],
             label_visibility="collapsed"
         )
 
@@ -688,7 +773,8 @@ if st.session_state["authentication_status"]:
         "Toptan Fiyat Teklifi": render_toptan_fiyat_teklifi,
         "Satış Fiyatı Hesaplayıcı": render_satis_fiyati_hesaplayici,
         "Aylık Hedef Analizi": render_hedef_analizi,
-        "Maliyet Yönetimi": render_maliyet_yonetimi
+        "Maliyet Yönetimi": render_maliyet_yonetimi,
+        "🧙‍♂️ Yeni Ürün Sihirbazı": render_yeni_urun_sihirbazi
     }
     page_map[app_mode]()
 
@@ -696,3 +782,95 @@ elif st.session_state["authentication_status"] is False:
     st.error('Kullanıcı adı/şifre yanlış')
 elif st.session_state["authentication_status"] is None:
     st.warning('Lütfen kullanıcı adı ve şifrenizi girin')
+
+# Yeni Ürün Sihirbazı modülü - ana menüye eklenecek
+def yeni_urun_sihirbazi():
+    st.header("🧙‍♂️ Yeni Ürün Sihirbazı")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.subheader("📊 Maliyet Bilgileri")
+        
+        # KDV Oranı
+        kdv_orani = st.number_input("KDV Oranı (%)", min_value=0.0, max_value=100.0, value=20.0, step=0.1)
+        
+        # Kargo Gideri
+        kargo_gideri = st.number_input("Kargo Gideri (TL)", min_value=0.0, value=80.0, step=0.5)
+        
+        # Reklam Gideri
+        reklam_gideri = st.number_input("Reklam Gideri (TL)", min_value=0.0, value=0.0, step=0.1)
+    
+    with col2:
+        st.subheader("📦 Ürün Bilgileri")
+        
+        # Model Kodu
+        model_kodu = st.text_input("Model Kodu")
+        
+        # Barkod
+        barkod = st.text_input("Barkod")
+        
+        # Alış Fiyatı
+        alis_fiyati = st.number_input("Alış Fiyatı (KDV Hariç)", min_value=0.0, format="%.2f")
+    
+    # Ürün bilgileri girildikten sonra maliyet hesaplama
+    if st.button("💰 Maliyeti Hesapla"):
+        if not model_kodu or not barkod:
+            st.error("Model Kodu ve Barkod alanları boş bırakılamaz.")
+        else:
+            # KDV Dahil Alış Fiyatı
+            kdv_dahil_alis_fiyati = alis_fiyati * (1 + kdv_orani / 100)
+            
+            # Sonuçları göster
+            st.subheader("📈 Hesaplanan Maliyet")
+            st.write(f"**Model Kodu:** {model_kodu}")
+            st.write(f"**Barkod:** {barkod}")
+            st.write(f"**KDV Dahil Alış Fiyatı:** {kdv_dahil_alis_fiyati:.2f} TL")
+            st.write(f"**Kargo Gideri:** {kargo_gideri:.2f} TL")
+            st.write(f"**Reklam Gideri:** {reklam_gideri:.2f} TL")
+            
+            # Toplam maliyet
+            toplam_maliyet = alis_fiyati + kargo_gideri + reklam_gideri
+            st.write(f"**Toplam Maliyet:** {toplam_maliyet:.2f} TL")
+            
+            # Kâr marjı hesaplama
+            kar_marji = 100 * (toplam_maliyet - alis_fiyati) / toplam_maliyet
+            st.write(f"**Kâr Marjı:** {kar_marji:.2f}%")
+            
+            # Kâr hesaplama
+            net_kar = toplam_maliyet - alis_fiyati
+            st.write(f"**Net Kâr:** {net_kar:.2f} TL")
+            
+            # Komisyon
+            komisyon = st.session_state.get('tekil_komisyon', 21.5)
+            komisyon_tutari = alis_fiyati * (komisyon / 100)
+            st.write(f"**Komisyon (%{komisyon}):** {komisyon_tutari:.2f} TL")
+            
+            # Nihai Kâr
+            nihai_kar = net_kar - komisyon_tutari
+            st.write(f"**Nihai Kâr:** {nihai_kar:.2f} TL")
+            
+            # Ürün kaydetme seçenekleri
+            if st.button("✅ Ürünü Kaydet"):
+                # Mevcut maliyet verileriyle birleştir
+                yeni_urun = pd.DataFrame([{
+                    "Model Kodu": model_kodu,
+                    "Barkod": barkod,
+                    "Alış Fiyatı": alis_fiyati,
+                    "KDV Oranı": kdv_orani,
+                    "Kargo Gideri": kargo_gideri,
+                    "Reklam Gideri": reklam_gideri
+                }])
+                
+                # Güncel maliyet verileriyle birleştir
+                st.session_state.df_maliyet = pd.concat([st.session_state.df_maliyet, yeni_urun], ignore_index=True).drop_duplicates(subset=['Barkod'], keep='last')
+                
+                # Google Sheets'e kaydet
+                try:
+                    gc = get_google_creds()
+                    workbook = gc.open("maliyet_referans")
+                    worksheet = workbook.worksheet("Sayfa1")
+                    set_with_dataframe(worksheet, st.session_state.df_maliyet, reindex=True)
+                    st.success("Yeni ürün başarıyla kaydedildi ve Google Sheets'e aktarıldı.")
+                except Exception as e:
+                    st.error(f"Google Sheets'e kaydedilirken hata oluştu: {e}")
