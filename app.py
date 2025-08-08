@@ -667,13 +667,116 @@ def render_toptan_fiyat_teklifi():
             )
             st.markdown('</div>', unsafe_allow_html=True)
 
-# --- YENİ VE EXCEL İLE UYUMLU SİHİRBAZ FONKSİYONU ---
+# --- YENİ VE GELİŞTİRİLMİŞ SİHİRBAZ FONKSİYONU ---
 def render_yeni_urun_sihirbazi():
-    st.title("🧙‍♂️ Yeni Ürün Satış Fiyatı Sihirbazı")
+    # --- YENİ: Retro & Light Tasarım için CSS ---
+    st.markdown("""
+    <style>
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 24px;
+    }
+    .stTabs [data-baseweb="tab"] {
+        height: 50px;
+        white-space: pre-wrap;
+        background-color: #f0f2f6;
+        border-radius: 4px 4px 0px 0px;
+        gap: 1px;
+        padding-top: 10px;
+        padding-bottom: 10px;
+    }
+    .stTabs [aria-selected="true"] {
+        background-color: #FFFFFF;
+    }
+    .stButton button {
+        background-color: #0068c9;
+        color: white;
+    }
+    .stTextInput input, .stNumberInput input, .stSelectbox div[data-baseweb="select"] > div {
+        background-color: #f0f2f6;
+    }
+    .metric-container {
+        background-color: #f0f2f6;
+        border: 1px solid #e0e0e0;
+        border-radius: 8px;
+        padding: 1rem;
+        text-align: center;
+    }
+    .metric-container .stMetricLabel {
+        font-weight: bold;
+    }
+    .metric-container .stMetricValue {
+        font-size: 1.75rem;
+        color: #262730;
+    }
+    .copy-button {
+        background-color: transparent;
+        border: none;
+        color: #888;
+        cursor: pointer;
+        font-size: 16px;
+        margin-left: 8px;
+    }
+    .copy-button:hover {
+        color: #000;
+    }
+    </style>
+    """, unsafe_allow_html=True)
 
-    with st.container():
-        st.markdown('<div class="card">', unsafe_allow_html=True)
-        
+    st.title("🧙‍♂️ Yeni Ürün Sihirbazı")
+
+    # --- YENİ: Sekmeli Arayüz (Tasarım ve Kullanım Kolaylığı için) ---
+    tab1, tab2 = st.tabs(["**Ürün Adı & Açıklama Oluşturucu**", "**Maliyet & Fiyat Hesaplayıcı**"])
+
+    # ==============================================================================
+    # TAB 1: ÜRÜN ADI OLUŞTURUCU
+    # ==============================================================================
+    with tab1:
+        col1, col2 = st.columns([3, 2]) # Sol taraf daha geniş
+
+        with col1:
+            st.subheader("Ürün Özellikleri")
+            
+            # --- Girdi Alanları ---
+            kategori = st.selectbox("Ürün Kategorisi", ["Elbise", "Bluz", "Pantolon", "T-Shirt", "Tunik", "Gömlek"])
+            model_kodu = st.text_input("Model Kodu", placeholder="Örn: 320315")
+            yaka_tipi = st.selectbox("Yaka Tipi", ["Bisiklet Yaka", "V Yaka", "Prenses Yaka", "Carmen Yaka", "Hakim Yaka", "Gömlek Yaka"])
+            kol_boyu = st.selectbox("Kol Boyu", ["Kolsuz", "Kısa Kol", "Yarım Kol", "Uzun Kol", "Fakir Kol", "Yarasa Kol", "Truvakar Kol"])
+            urun_boyu = st.selectbox("Ürün Boyu", ["Mini", "Midi", "Maxi"])
+            desen = st.text_input("Desen (Opsiyonel)", placeholder="Örn: Çiçekli, Puantiyeli, Soyut")
+            cep = st.radio("Cep Durumu", ["Cepli", "Cepsiz"], index=1, horizontal=True)
+            kumas_karisimi = st.text_input("Kumaş Karışımı (Opsiyonel)", placeholder="Örn: %95 Polyester %5 Elastan")
+
+        # --- Ürün Adı Oluşturma Mantığı ---
+        if st.button("✨ Ürün Adını Oluştur", use_container_width=True, type="primary"):
+            with col2:
+                st.subheader("Oluşturulan Başlık")
+                
+                # 1. Parçaları topla
+                parts = ["Büyük Beden"] # Kural 1: Her zaman başta
+                
+                if yaka_tipi: parts.append(yaka_tipi)
+                if kol_boyu: parts.append(kol_boyu)
+                if desen: parts.append(desen.strip().capitalize() + " Desenli")
+                if cep == "Cepli": parts.append("Cepli")
+                
+                # Elastan kontrolü
+                esnek_kumas = "elastan" in kumas_karisimi.lower()
+                if esnek_kumas:
+                    parts.append("Esnek Kumaşlı")
+
+                if kategori: parts.append(kategori)
+                if model_kodu: parts.append(model_kodu.strip())
+
+                # 2. Akıllı sıralama ile birleştir
+                urun_adi = " ".join(parts)
+                
+                st.code(urun_adi, language=None)
+                st.info("Yukarıdaki ürün adını çift tıklayarak veya kopyala butonu ile alabilirsiniz.")
+
+    # ==============================================================================
+    # TAB 2: MALİYET & FİYAT HESAPLAYICI
+    # ==============================================================================
+    with tab2:
         col1, col2 = st.columns(2)
 
         with col1:
@@ -690,21 +793,20 @@ def render_yeni_urun_sihirbazi():
             hesaplama_tipi = st.radio(
                 "Hesaplama Yönü Seçin",
                 ["Hedefe Göre Satış Fiyatı Bul", "Satış Fiyatına Göre Kâr Hesapla"],
-                index=1,
                 key="sihirbaz_hesaplama_tipi"
             )
 
             if hesaplama_tipi == "Hedefe Göre Satış Fiyatı Bul":
                 hedef_tipi = st.selectbox("Hedef Türü", ["% Kâr Marjı", "Net Kâr Tutarı (TL)"], key="sihirbaz_hedef_tipi")
                 if hedef_tipi == "% Kâr Marjı":
-                    hedef_deger = st.number_input("Hedef Kâr Marjı (%)", min_value=0.0, max_value=99.9, value=25.0, step=0.5, key="sihirbaz_hedef_marj")
+                    hedef_deger = st.number_input("Hedef Kâr Marjı (%)", min_value=0.0, max_value=99.9, value=20.0, step=0.5, key="sihirbaz_hedef_marj")
                 else:
                     hedef_deger = st.number_input("Hedef Net Kâr (TL)", min_value=0.0, value=100.0, step=1.0, key="sihirbaz_hedef_tutar")
             else:
                 satis_fiyati_input = st.number_input("Satış Fiyatı (KDV Dahil)", min_value=0.01, value=899.95, step=0.01, key="sihirbaz_satis_fiyati")
 
-        if st.button("🔮 Sihirbazı Çalıştır", type="primary", use_container_width=True):
-            # --- HESAPLAMA MANTIĞI (EXCEL İLE %100 UYUMLU) ---
+        st.markdown("---")
+        if st.button("🔮 Fiyatı Hesapla", use_container_width=True, type="primary"):
             kdv_carpan = urun_kdv_orani / 100
             kdv_bolen = 1 + kdv_carpan
 
@@ -713,53 +815,45 @@ def render_yeni_urun_sihirbazi():
             else:
                 alis_fiyati_kdvsiz = alis_fiyati_input
             
-            if hesaplama_tipi == "Hedefe Göre Satış Fiyatı Bul":
-                st.warning("Hedefe göre fiyat bulma özelliği henüz tam olarak doğru çalışmamaktadır ve geliştirme aşamasındadır.")
-                satis_fiyati_kdvli = 0; net_kar = 0; kar_marji = 0
+            alis_kdv_tutari = alis_fiyati_kdvsiz * kdv_carpan
+            sabit_giderler = alis_fiyati_kdvsiz + kargo_gideri + reklam_gideri
             
-            else: # Satış Fiyatına Göre Kâr Hesapla
+            if hesaplama_tipi == "Hedefe Göre Satış Fiyatı Bul":
+                payda = 1 - (komisyon_orani / 100 * kdv_bolen) - kdv_carpan
+                if hedef_tipi == "% Kâr Marjı":
+                    hedef_marj = hedef_deger / 100
+                    pay = sabit_giderler - alis_kdv_tutari
+                    payda = payda - hedef_marj
+                else:
+                    hedef_kar_tl = hedef_deger
+                    pay = sabit_giderler - alis_kdv_tutari + hedef_kar_tl
+                
+                if payda <= 0:
+                    st.error("Bu hedefe ulaşılamıyor. Komisyon ve/veya kâr hedefi çok yüksek.")
+                    satis_fiyati_kdvsiz = 0
+                else:
+                    satis_fiyati_kdvsiz = pay / payda
+                satis_fiyati_kdvli = satis_fiyati_kdvsiz * kdv_bolen
+            else:
                 satis_fiyati_kdvli = satis_fiyati_input
                 satis_fiyati_kdvsiz = satis_fiyati_kdvli / kdv_bolen
-                
-                # 1. Satıştan gelen KDV'yi hesapla
-                satis_kdv_tutari = satis_fiyati_kdvli - satis_fiyati_kdvsiz
-                
-                # 2. Alıştan kaynaklanan KDV'yi hesapla
-                alis_kdv_tutari = alis_fiyati_kdvsiz * kdv_carpan
-                
-                # 3. Devlete ödenecek Net KDV'yi bul (Bu bir giderdir)
-                net_odenecek_kdv = satis_kdv_tutari - alis_kdv_tutari
-                
-                # 4. Komisyon giderini KDV'li fiyattan hesapla
-                komisyon_gideri = satis_fiyati_kdvli * (komisyon_orani / 100)
-                
-                # 5. Toplam giderleri hesapla
-                toplam_giderler = (
-                    alis_fiyati_kdvsiz + 
-                    kargo_gideri + 
-                    reklam_gideri + 
-                    komisyon_gideri + 
-                    net_odenecek_kdv  # Excel'deki gibi Net KDV'yi gider olarak ekle
-                )
-                
-                # 6. Net karı hesapla (KDV'siz gelir - toplam giderler)
-                net_kar = satis_fiyati_kdvsiz - toplam_giderler
-                
-                # 7. Kar marjını hesapla
-                kar_marji = (net_kar / satis_fiyati_kdvsiz) * 100 if satis_fiyati_kdvsiz > 0 else 0
-
-            st.subheader("Sonuç")
-            if net_kar > 0:
-                st.success("Bu satıştan kâr ediyorsunuz.")
-            else:
-                st.error("Bu satıştan zarar ediyorsunuz.")
             
-            res_col1, res_col2, res_col3 = st.columns(3)
-            res_col1.metric("Satış Fiyatı (KDV Dahil)", f"{satis_fiyati_kdvli:,.2f} TL")
-            res_col2.metric("Net Kâr / Zarar", f"{net_kar:,.2f} TL")
-            res_col3.metric("Kâr Marjı", f"{kar_marji:.2f}%")
+            satis_kdv_tutari = satis_fiyati_kdvsiz * kdv_carpan
+            net_odenecek_kdv = satis_kdv_tutari - alis_kdv_tutari
+            komisyon_gideri = satis_fiyati_kdvli * (komisyon_orani / 100)
+            toplam_giderler = sabit_giderler + komisyon_gideri + net_odenecek_kdv
+            net_kar = satis_fiyati_kdvsiz - toplam_giderler
+            kar_marji = (net_kar / satis_fiyati_kdvsiz) * 100 if satis_fiyati_kdvsiz > 0 else 0
 
-        st.markdown('</div>', unsafe_allow_html=True)
+            # --- YENİ: Kompakt Sonuç Gösterimi ---
+            st.subheader("Sonuç")
+            res_col1, res_col2, res_col3 = st.columns(3)
+            with res_col1:
+                st.markdown(f'<div class="metric-container"><div class="stMetricLabel">Satış Fiyatı (KDV Dahil)</div><div class="stMetricValue">{satis_fiyati_kdvli:,.2f} TL</div></div>', unsafe_allow_html=True)
+            with res_col2:
+                st.markdown(f'<div class="metric-container"><div class="stMetricLabel">Net Kâr / Zarar</div><div class="stMetricValue">{net_kar:,.2f} TL</div></div>', unsafe_allow_html=True)
+            with res_col3:
+                st.markdown(f'<div class="metric-container"><div class="stMetricLabel">Kâr Marjı</div><div class="stMetricValue">{kar_marji:.2f}%</div></div>', unsafe_allow_html=True)
 
 # --- KULLANICI GİRİŞİ ---
 # config.yaml dosyasını oku (Streamlit Cloud'da kök dizinde olmalı)
