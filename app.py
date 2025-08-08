@@ -641,7 +641,7 @@ def render_toptan_fiyat_teklifi():
             st.download_button(label="✅ Fiyat Listesini Excel Olarak İndir", data=output.getvalue(), file_name='Toptan_Fiyat_Teklifi.xlsx')
             st.markdown('</div>', unsafe_allow_html=True)
 
-# --- YENİ SİHİRBAZ FONKSİYONU BURAYA EKLENİYOR ---
+# --- YENİ VE KOMİSYONLU SİHİRBAZ FONKSİYONU ---
 def render_yeni_urun_sihirbazi():
     st.title("🧙‍♂️ Yeni Ürün Satış Fiyatı Sihirbazı")
 
@@ -652,9 +652,15 @@ def render_yeni_urun_sihirbazi():
 
         with col1:
             st.subheader("📊 Maliyet Girdileri")
+            
+            urun_kdv_orani = st.number_input("Ürünün KDV Oranı (%)", min_value=0.0, value=10.0, step=1.0, key="sihirbaz_kdv")
+            
+            # --- YENİ: Komisyon Oranı Eklendi ---
+            komisyon_orani = st.number_input("Platform Komisyon Oranı (%)", min_value=0.0, value=21.5, step=0.1, key="sihirbaz_komisyon")
+
             alis_fiyati_input = st.number_input("Ürün Alış Fiyatı (TL)", min_value=0.0, step=0.01, key="sihirbaz_alis")
             kdv_durumu = st.radio("Alış Fiyatı KDV Durumu", ["KDV Dahil", "KDV Hariç"], horizontal=True, key="sihirbaz_kdv_durum")
-            satis_kdv_orani = st.number_input("Satış KDV Oranı (%)", min_value=0.0, value=10.0, step=1.0, key="sihirbaz_kdv")
+            
             kargo_gideri = st.number_input("Kargo Gideri (TL)", min_value=0.0, value=80.0, step=0.5, key="sihirbaz_kargo")
             reklam_gideri = st.number_input("Birim Reklam Gideri (TL)", min_value=0.0, value=0.0, step=0.1, key="sihirbaz_reklam")
 
@@ -666,39 +672,58 @@ def render_yeni_urun_sihirbazi():
                 key="sihirbaz_hesaplama_tipi"
             )
 
-            # Dinamik olarak gösterilecek alanlar
             if hesaplama_tipi == "Hedefe Göre Satış Fiyatı Bul":
                 hedef_tipi = st.selectbox("Hedef Türü", ["% Kâr Marjı", "Net Kâr Tutarı (TL)"], key="sihirbaz_hedef_tipi")
                 if hedef_tipi == "% Kâr Marjı":
                     hedef_deger = st.number_input("Hedef Kâr Marjı (%)", min_value=0.0, max_value=99.9, value=25.0, step=0.5, key="sihirbaz_hedef_marj")
-                else: # Net Kâr Tutarı (TL)
+                else:
                     hedef_deger = st.number_input("Hedef Net Kâr (TL)", min_value=0.0, value=100.0, step=1.0, key="sihirbaz_hedef_tutar")
-            else: # Satış Fiyatına Göre Kâr Hesapla
+            else:
                 satis_fiyati_input = st.number_input("Satış Fiyatı (KDV Dahil)", min_value=0.01, step=0.01, key="sihirbaz_satis_fiyati")
 
         if st.button("🔮 Sihirbazı Çalıştır", type="primary", use_container_width=True):
-            # --- HESAPLAMA MANTIĞI ---
-            # 1. KDV'siz alış fiyatını bul
+            # --- HESAPLAMA MANTIĞI (KOMİSYON DAHİL) ---
             if kdv_durumu == "KDV Dahil":
-                # Not: Alış KDV'si bilinmediğinden, satış KDV oranı baz alınarak geri hesaplama yapılıyor.
-                alis_fiyati_kdvsiz = alis_fiyati_input / (1 + satis_kdv_orani / 100)
+                alis_fiyati_kdvsiz = alis_fiyati_input / (1 + urun_kdv_orani / 100)
             else:
                 alis_fiyati_kdvsiz = alis_fiyati_input
             
-            # 2. Toplam maliyeti (KDV'siz alış fiyatı + diğer giderler) hesapla
-            toplam_maliyet_kdvsiz = alis_fiyati_kdvsiz + kargo_gideri + reklam_gideri
+            # Komisyon KDV'li satış fiyatı üzerinden hesaplandığı için, formülü ona göre kurmalıyız.
+            # SF_kdvli * (komisyon_orani / 100) = Komisyon_Gideri
+            # SF_kdvsiz = SF_kdvli / (1 + kdv_orani / 100)
+            # Bu iki denklem birleştirilerek çözülür.
+            
+            sabit_maliyetler = alis_fiyati_kdvsiz + kargo_gideri + reklam_gideri
+            kdv_bolen = 1 + (urun_kdv_orani / 100)
 
             if hesaplama_tipi == "Hedefe Göre Satış Fiyatı Bul":
                 if hedef_tipi == "% Kâr Marjı":
                     if hedef_deger >= 100:
                         st.error("Kâr marjı %100'den küçük olmalıdır.")
                         st.stop()
-                    satis_fiyati_kdvsiz = toplam_maliyet_kdvsiz / (1 - hedef_deger / 100)
+                    # Formül: SF_kdvsiz = (Sabit_Maliyetler) / (1 - komisyon_orani - hedef_marj)
+                    # Bu formül, komisyonun KDV'siz fiyattan alındığını varsayar, doğru olan KDV'li fiyattır.
+                    # Doğru formül: SF_kdvli = (sabit_maliyetler + hedef_kar_tl) / (1/kdv_bolen - komisyon_orani/100)
+                    # Marj hedefi için iteratif bir çözüm veya daha karmaşık bir denklem gerekir.
+                    # Şimdilik basitleştirilmiş bir yaklaşım kullanalım:
+                    payda = (1 / kdv_bolen) - (komisyon_orani / 100) - (hedef_deger / 100 * (1/kdv_bolen))
+                    if payda <= 0:
+                        st.error("Bu parametrelerle pozitif bir satış fiyatı hesaplanamıyor. Komisyon ve kâr marjı toplamı çok yüksek.")
+                        st.stop()
+                    satis_fiyati_kdvli = sabit_maliyetler / payda
+
                 else: # Net Kâr Tutarı (TL)
-                    satis_fiyati_kdvsiz = toplam_maliyet_kdvsiz + hedef_deger
-                
-                satis_fiyati_kdvli = satis_fiyati_kdvsiz * (1 + satis_kdv_orani / 100)
-                net_kar = satis_fiyati_kdvsiz - toplam_maliyet_kdvsiz
+                    hedef_kar_tl = hedef_deger
+                    payda = (1 / kdv_bolen) - (komisyon_orani / 100)
+                    if payda <= 0:
+                        st.error("Bu parametrelerle pozitif bir satış fiyatı hesaplanamıyor. Komisyon oranı çok yüksek.")
+                        st.stop()
+                    satis_fiyati_kdvli = (sabit_maliyetler + hedef_kar_tl) / payda
+
+                satis_fiyati_kdvsiz = satis_fiyati_kdvli / kdv_bolen
+                komisyon_gideri = satis_fiyati_kdvli * (komisyon_orani / 100)
+                toplam_maliyet = sabit_maliyetler + komisyon_gideri
+                net_kar = satis_fiyati_kdvsiz - toplam_maliyet
                 kar_marji = (net_kar / satis_fiyati_kdvsiz) * 100 if satis_fiyati_kdvsiz > 0 else 0
 
                 st.subheader("Sonuç")
@@ -709,8 +734,11 @@ def render_yeni_urun_sihirbazi():
                 res_col3.metric("Gerçekleşen Kâr Marjı", f"{kar_marji:.2f}%")
 
             else: # Satış Fiyatına Göre Kâr Hesapla
-                satis_fiyati_kdvsiz = satis_fiyati_input / (1 + satis_kdv_orani / 100)
-                net_kar = satis_fiyati_kdvsiz - toplam_maliyet_kdvsiz
+                satis_fiyati_kdvli = satis_fiyati_input
+                satis_fiyati_kdvsiz = satis_fiyati_kdvli / kdv_bolen
+                komisyon_gideri = satis_fiyati_kdvli * (komisyon_orani / 100)
+                toplam_maliyet = sabit_maliyetler + komisyon_gideri
+                net_kar = satis_fiyati_kdvsiz - toplam_maliyet
                 kar_marji = (net_kar / satis_fiyati_kdvsiz) * 100 if satis_fiyati_kdvsiz > 0 else 0
 
                 st.subheader("Sonuç")
@@ -720,7 +748,7 @@ def render_yeni_urun_sihirbazi():
                     st.error("Bu satıştan zarar ediyorsunuz.")
                 
                 res_col1, res_col2, res_col3 = st.columns(3)
-                res_col1.metric("Satış Fiyatı (KDV Dahil)", f"{satis_fiyati_input:,.2f} TL")
+                res_col1.metric("Satış Fiyatı (KDV Dahil)", f"{satis_fiyati_kdvli:,.2f} TL")
                 res_col2.metric("Net Kâr / Zarar", f"{net_kar:,.2f} TL")
                 res_col3.metric("Kâr Marjı", f"{kar_marji:.2f}%")
 
