@@ -471,10 +471,10 @@ def render_satis_fiyati_hesaplayici():
             sonuclar = kar_hesapla(satis_fiyati_kdvli, urun_maliyeti, komisyon_orani, kdv_orani, kargo_gideri, reklam_gideri)
             
             st.subheader("Sonuç")
-            res_col1, res_col2, res_col3 = st.columns(3)
-            res_col1.metric("Net Kâr (TL)", f"{sonuclar['net_kar']:,.2f} TL")
-            res_col2.metric("Kâr Marjı (%)", f"{sonuclar['kar_marji']:.2f}%")
-            res_col3.metric("Net Maliyet (TL)", f"{sonuclar['toplam_maliyet']:,.2f} TL")
+            # --- DÜZELTME: Metriklerin kesilmesini önlemek için sütunlar kaldırıldı ---
+            st.metric("Net Kâr (TL)", f"{sonuclar['net_kar']:,.2f} TL")
+            st.metric("Kâr Marjı (%)", f"{sonuclar['kar_marji']:.2f}%")
+            st.metric("Net Maliyet (TL)", f"{sonuclar['toplam_maliyet']:,.2f} TL")
 
         st.markdown('</div>', unsafe_allow_html=True)
 
