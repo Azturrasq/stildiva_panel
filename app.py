@@ -507,11 +507,18 @@ def render_yeni_urun_sihirbazi():
     with st.container():
         st.markdown('<div class="card">', unsafe_allow_html=True)
         
-        # --- DÜZELTME: Arayüz, en baştaki basit ve dikey düzene geri döndürüldü ---
+        # --- DÜZELTME: Dinamik arayüz için radio butonu form dışına taşındı ---
+        st.subheader("🎯 Hedef Belirleme")
+        hesaplama_tipi = st.radio(
+            "Hesaplama Yönü Seçin",
+            ["Hedefe Göre Satış Fiyatı Bul", "Satış Fiyatına Göre Kâr Hesapla"],
+            index=1,
+            key="sihirbaz_hesaplama_tipi"
+        )
+
         with st.form("yeni_urun_sihirbazi_formu"):
             st.subheader("📊 Maliyet ve Fiyat Girdileri")
             
-            # Girdi alanları dikey olarak sıralandı
             urun_kdv_orani = st.number_input("Ürünün KDV Oranı (%)", min_value=0.0, value=10.0, step=1.0, key="sihirbaz_kdv")
             komisyon_orani = st.number_input("Platform Komisyon Oranı (%)", min_value=0.0, value=21.5, step=0.1, key="sihirbaz_komisyon")
             alis_fiyati_input = st.number_input("Ürün Alış Fiyatı (TL)", min_value=0.0, value=270.0, step=0.01, key="sihirbaz_alis")
@@ -520,22 +527,15 @@ def render_yeni_urun_sihirbazi():
             reklam_gideri = st.number_input("Birim Reklam Gideri (TL)", min_value=0.0, value=30.0, step=0.1, key="sihirbaz_reklam")
             
             st.markdown("---")
-            st.subheader("🎯 Hedef Belirleme")
 
-            hesaplama_tipi = st.radio(
-                "Hesaplama Yönü Seçin",
-                ["Hedefe Göre Satış Fiyatı Bul", "Satış Fiyatına Göre Kâr Hesapla"],
-                index=1,
-                key="sihirbaz_hesaplama_tipi"
-            )
-
+            # Dinamik olarak gösterilen girdi alanları
             if hesaplama_tipi == "Hedefe Göre Satış Fiyatı Bul":
                 hedef_tipi = st.selectbox("Hedef Türü", ["% Kâr Marjı", "Net Kâr Tutarı (TL)"], key="sihirbaz_hedef_tipi")
                 if hedef_tipi == "% Kâr Marjı":
                     hedef_deger = st.number_input("Hedef Kâr Marjı (%)", min_value=0.0, max_value=99.9, value=25.0, step=0.5, key="sihirbaz_hedef_marj")
                 else:
                     hedef_deger = st.number_input("Hedef Net Kâr (TL)", min_value=0.0, value=100.0, step=1.0, key="sihirbaz_hedef_tutar")
-            else:
+            else: # Satış Fiyatına Göre Kâr Hesapla
                 satis_fiyati_input = st.number_input("Satış Fiyatı (KDV Dahil)", min_value=0.01, value=899.95, step=0.01, key="sihirbaz_satis_fiyati")
             
             submitted = st.form_submit_button("🔮 Sihirbazı Çalıştır", type="primary", use_container_width=True)
@@ -636,7 +636,7 @@ if st.session_state["authentication_status"]:
         "Toptan Fiyat Teklifi": render_toptan_fiyat_teklifi,
         "Aylık Hedef Analizi": render_hedef_analizi,
         "Maliyet Yönetimi": render_maliyet_yonetimi,
-        "🧙‍♂️ Yeni Ürün Sihirbazı": render_yeni_urun_sihirbazi
+        "🧙‍♂️ Yeni Ürün Sihirbazi": render_yeni_urun_sihirbazi
     }
     page_map[app_mode]()
 
