@@ -517,8 +517,13 @@ def render_yeni_urun_sihirbazi():
                 komisyon_orani = st.number_input("Platform Komisyon Oranı (%)", min_value=0.0, value=21.5, step=0.1, key="sihirbaz_komisyon")
                 alis_fiyati_input = st.number_input("Ürün Alış Fiyatı (TL)", min_value=0.0, value=270.0, step=0.01, key="sihirbaz_alis")
                 kdv_durumu = st.radio("Alış Fiyatı KDV Durumu", ["KDV Dahil", "KDV Hariç"], index=1, horizontal=True, key="sihirbaz_kdv_durum")
-                kargo_gideri = st.number_input("Kargo Gideri (TL)", min_value=0.0, value=80.0, step=0.5, key="sihirbaz_kargo")
-                reklam_gideri = st.number_input("Birim Reklam Gideri (TL)", min_value=0.0, value=30.0, step=0.1, key="sihirbaz_reklam")
+                
+                # --- DÜZELTME: Kargo ve Reklam giderleri yan yana getirildi ---
+                sub_col1, sub_col2 = st.columns(2)
+                with sub_col1:
+                    kargo_gideri = st.number_input("Kargo Gideri (TL)", min_value=0.0, value=80.0, step=0.5, key="sihirbaz_kargo")
+                with sub_col2:
+                    reklam_gideri = st.number_input("Birim Reklam Gideri (TL)", min_value=0.0, value=30.0, step=0.1, key="sihirbaz_reklam")
 
             with col2:
                 st.subheader("🎯 Hedef Belirleme")
