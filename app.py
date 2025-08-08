@@ -507,7 +507,6 @@ def render_yeni_urun_sihirbazi():
     with st.container():
         st.markdown('<div class="card">', unsafe_allow_html=True)
         
-        # --- KESİN ÇÖZÜM: Arayüzü anında değiştirmek için form yapısı tamamen ayrıldı ---
         hesaplama_tipi = st.radio(
             "Hesaplama Yönü Seçin",
             ["Satış Fiyatına Göre Kâr Hesapla", "Hedefe Göre Satış Fiyatı Bul"],
@@ -515,25 +514,31 @@ def render_yeni_urun_sihirbazi():
             key="sihirbaz_hesaplama_tipi",
             horizontal=True
         )
-
-        # Ortak maliyet girdileri her iki formda da olacak
-        st.subheader("📊 Maliyet Girdileri")
-        urun_kdv_orani = st.number_input("Ürünün KDV Oranı (%)", min_value=0.0, value=10.0, step=1.0, key="sihirbaz_kdv")
-        komisyon_orani = st.number_input("Platform Komisyon Oranı (%)", min_value=0.0, value=21.5, step=0.1, key="sihirbaz_komisyon")
-        alis_fiyati_input = st.number_input("Ürün Alış Fiyatı (TL)", min_value=0.0, value=270.0, step=0.01, key="sihirbaz_alis")
-        kdv_durumu = st.radio("Alış Fiyatı KDV Durumu", ["KDV Dahil", "KDV Hariç"], index=1, horizontal=True, key="sihirbaz_kdv_durum")
-        kargo_gideri = st.number_input("Kargo Gideri (TL)", min_value=0.0, value=80.0, step=0.5, key="sihirbaz_kargo")
-        reklam_gideri = st.number_input("Birim Reklam Gideri (TL)", min_value=0.0, value=30.0, step=0.1, key="sihirbaz_reklam")
         
         st.markdown("---")
 
+        # --- DÜZELTME: Bölümlerin sırası isteğiniz doğrultusunda değiştirildi ---
+        
         satis_fiyati_kdvli = 0
         submitted = False
+        hedef_deger = None # Tanımlama
+        hedef_tipi = None # Tanımlama
 
+        # 1. Fiyat/Hedef Giriş Bölümü
         if hesaplama_tipi == "Satış Fiyatına Göre Kâr Hesapla":
             st.subheader("🎯 Fiyat Bilgisi")
             with st.form("kar_hesapla_form"):
                 satis_fiyati_input = st.number_input("Satış Fiyatı (KDV Dahil)", min_value=0.01, value=899.95, step=0.01, key="sihirbaz_satis_fiyati")
+                
+                # Maliyet girdileri formun içine taşındı
+                st.subheader("📊 Maliyet Girdileri")
+                urun_kdv_orani = st.number_input("Ürünün KDV Oranı (%)", min_value=0.0, value=10.0, step=1.0, key="sihirbaz_kdv_1")
+                komisyon_orani = st.number_input("Platform Komisyon Oranı (%)", min_value=0.0, value=21.5, step=0.1, key="sihirbaz_komisyon_1")
+                alis_fiyati_input = st.number_input("Ürün Alış Fiyatı (TL)", min_value=0.0, value=270.0, step=0.01, key="sihirbaz_alis_1")
+                kdv_durumu = st.radio("Alış Fiyatı KDV Durumu", ["KDV Dahil", "KDV Hariç"], index=1, horizontal=True, key="sihirbaz_kdv_durum_1")
+                kargo_gideri = st.number_input("Kargo Gideri (TL)", min_value=0.0, value=80.0, step=0.5, key="sihirbaz_kargo_1")
+                reklam_gideri = st.number_input("Birim Reklam Gideri (TL)", min_value=0.0, value=30.0, step=0.1, key="sihirbaz_reklam_1")
+
                 submitted = st.form_submit_button("🔮 Kâr Hesapla", type="primary", use_container_width=True)
                 if submitted:
                     satis_fiyati_kdvli = satis_fiyati_input
@@ -547,6 +552,15 @@ def render_yeni_urun_sihirbazi():
                 else:
                     hedef_deger = st.number_input("Hedef Net Kâr (TL)", min_value=0.0, value=100.0, step=1.0, key="sihirbaz_hedef_tutar")
                 
+                # Maliyet girdileri formun içine taşındı
+                st.subheader("📊 Maliyet Girdileri")
+                urun_kdv_orani = st.number_input("Ürünün KDV Oranı (%)", min_value=0.0, value=10.0, step=1.0, key="sihirbaz_kdv_2")
+                komisyon_orani = st.number_input("Platform Komisyon Oranı (%)", min_value=0.0, value=21.5, step=0.1, key="sihirbaz_komisyon_2")
+                alis_fiyati_input = st.number_input("Ürün Alış Fiyatı (TL)", min_value=0.0, value=270.0, step=0.01, key="sihirbaz_alis_2")
+                kdv_durumu = st.radio("Alış Fiyatı KDV Durumu", ["KDV Dahil", "KDV Hariç"], index=1, horizontal=True, key="sihirbaz_kdv_durum_2")
+                kargo_gideri = st.number_input("Kargo Gideri (TL)", min_value=0.0, value=80.0, step=0.5, key="sihirbaz_kargo_2")
+                reklam_gideri = st.number_input("Birim Reklam Gideri (TL)", min_value=0.0, value=30.0, step=0.1, key="sihirbaz_reklam_2")
+
                 submitted = st.form_submit_button("🔮 Fiyat Bul", type="primary", use_container_width=True)
                 if submitted:
                     kdv_carpan_calc = urun_kdv_orani / 100
@@ -571,11 +585,28 @@ def render_yeni_urun_sihirbazi():
                         satis_fiyati_kdvsiz = pay / payda
                         satis_fiyati_kdvli = satis_fiyati_kdvsiz * kdv_bolen_calc
 
+        # 2. Sonuç Bölümü
         if submitted and satis_fiyati_kdvli > 0:
-            kdv_bolen = 1 + (urun_kdv_orani / 100)
-            alis_fiyati_kdvsiz = alis_fiyati_input / kdv_bolen if kdv_durumu == "KDV Dahil" else alis_fiyati_input
+            # Hesaplama için doğru değişkenleri al
+            if hesaplama_tipi == "Satış Fiyatına Göre Kâr Hesapla":
+                urun_kdv_orani_hesap = st.session_state.sihirbaz_kdv_1
+                komisyon_orani_hesap = st.session_state.sihirbaz_komisyon_1
+                alis_fiyati_input_hesap = st.session_state.sihirbaz_alis_1
+                kdv_durumu_hesap = st.session_state.sihirbaz_kdv_durum_1
+                kargo_gideri_hesap = st.session_state.sihirbaz_kargo_1
+                reklam_gideri_hesap = st.session_state.sihirbaz_reklam_1
+            else:
+                urun_kdv_orani_hesap = st.session_state.sihirbaz_kdv_2
+                komisyon_orani_hesap = st.session_state.sihirbaz_komisyon_2
+                alis_fiyati_input_hesap = st.session_state.sihirbaz_alis_2
+                kdv_durumu_hesap = st.session_state.sihirbaz_kdv_durum_2
+                kargo_gideri_hesap = st.session_state.sihirbaz_kargo_2
+                reklam_gideri_hesap = st.session_state.sihirbaz_reklam_2
+
+            kdv_bolen = 1 + (urun_kdv_orani_hesap / 100)
+            alis_fiyati_kdvsiz = alis_fiyati_input_hesap / kdv_bolen if kdv_durumu_hesap == "KDV Dahil" else alis_fiyati_input_hesap
             
-            sonuclar = kar_hesapla(satis_fiyati_kdvli, alis_fiyati_kdvsiz, komisyon_orani, urun_kdv_orani, kargo_gideri, reklam_gideri)
+            sonuclar = kar_hesapla(satis_fiyati_kdvli, alis_fiyati_kdvsiz, komisyon_orani_hesap, urun_kdv_orani_hesap, kargo_gideri_hesap, reklam_gideri_hesap)
             net_kar = sonuclar['net_kar']
             kar_marji = sonuclar['kar_marji']
 
@@ -638,7 +669,7 @@ if st.session_state["authentication_status"]:
         "Toptan Fiyat Teklifi": render_toptan_fiyat_teklifi,
         "Aylık Hedef Analizi": render_hedef_analizi,
         "Maliyet Yönetimi": render_maliyet_yonetimi,
-        "🧙‍♂️ Yeni Ürün Sihirbazı": render_yeni_urun_sihirbazi
+        "🧙‍♂️ Yeni Ürün Sihirbazi": render_yeni_urun_sihirbazi
     }
     page_map[app_mode]()
 
