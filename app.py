@@ -507,17 +507,8 @@ def render_yeni_urun_sihirbazi():
     with st.container():
         st.markdown('<div class="card">', unsafe_allow_html=True)
         
-        # --- DÜZELTME: Dinamik arayüz için radio butonu form dışına taşındı ---
-        st.subheader("🎯 Hedef Belirleme")
-        hesaplama_tipi = st.radio(
-            "Hesaplama Yönü Seçin",
-            ["Hedefe Göre Satış Fiyatı Bul", "Satış Fiyatına Göre Kâr Hesapla"],
-            index=1,
-            key="sihirbaz_hesaplama_tipi"
-        )
-
         with st.form("yeni_urun_sihirbazi_formu"):
-            st.subheader("📊 Maliyet ve Fiyat Girdileri")
+            st.subheader("📊 Maliyet Girdileri")
             
             urun_kdv_orani = st.number_input("Ürünün KDV Oranı (%)", min_value=0.0, value=10.0, step=1.0, key="sihirbaz_kdv")
             komisyon_orani = st.number_input("Platform Komisyon Oranı (%)", min_value=0.0, value=21.5, step=0.1, key="sihirbaz_komisyon")
@@ -527,6 +518,15 @@ def render_yeni_urun_sihirbazi():
             reklam_gideri = st.number_input("Birim Reklam Gideri (TL)", min_value=0.0, value=30.0, step=0.1, key="sihirbaz_reklam")
             
             st.markdown("---")
+
+            # --- DÜZELTME: Mantıksal akış için hedef belirleme bölümü aşağı taşındı ---
+            st.subheader("🎯 Fiyat ve Hedef Belirleme")
+            hesaplama_tipi = st.radio(
+                "Hesaplama Yönü Seçin",
+                ["Hedefe Göre Satış Fiyatı Bul", "Satış Fiyatına Göre Kâr Hesapla"],
+                index=1,
+                key="sihirbaz_hesaplama_tipi"
+            )
 
             # Dinamik olarak gösterilen girdi alanları
             if hesaplama_tipi == "Hedefe Göre Satış Fiyatı Bul":
