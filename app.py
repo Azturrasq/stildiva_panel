@@ -516,28 +516,31 @@ def render_kampanya_fiyati():
     search_term = st.text_input("Aramak için Model Kodu veya Barkod girin", key="kampanya_search_term")
 
     if search_term:
-        # Hem model kodunda hem barkodda ara
         results = df_maliyet[
             df_maliyet['Model Kodu'].str.contains(search_term, case=False, na=False) |
             df_maliyet['Barkod'].str.contains(search_term, case=False, na=False)
         ]
 
         if not results.empty:
-            if len(results) == 1:
+            # --- DÜZELTME: Arama sonuçları Model Kodu'na göre tekilleştirildi ---
+            unique_model_codes = results['Model Kodu'].unique()
+            
+            if len(unique_model_codes) == 1:
+                # Tek bir model kodu bulunduysa, ilk varyantı otomatik seç
                 st.session_state.selected_product_kampanya = results.iloc[0]
                 st.success(f"Ürün bulundu ve seçildi: **{st.session_state.selected_product_kampanya['Model Kodu']}**")
             else:
-                # Birden fazla sonuç varsa seçtir
-                results['display'] = results['Model Kodu'] + " (" + results['Barkod'] + ")"
+                # Birden fazla model kodu varsa, kullanıcıya seçtir
                 secim = st.selectbox(
-                    "Birden fazla sonuç bulundu, lütfen birini seçin:",
-                    options=results['display'],
-                    index=None, # Başlangıçta boş olsun
+                    "Birden fazla model bulundu, lütfen birini seçin:",
+                    options=unique_model_codes,
+                    index=None,
+                    placeholder="Bir model kodu seçin...",
                     key="kampanya_product_select"
                 )
                 if secim:
-                    selected_index = results[results['display'] == secim].index[0]
-                    st.session_state.selected_product_kampanya = df_maliyet.loc[selected_index]
+                    # Seçilen model kodunun ilk varyantını al
+                    st.session_state.selected_product_kampanya = results[results['Model Kodu'] == secim].iloc[0]
         else:
             st.warning("Bu arama kriterine uygun ürün bulunamadı.")
             if 'selected_product_kampanya' in st.session_state:
@@ -551,15 +554,19 @@ def render_kampanya_fiyati():
         st.markdown('<div class="card">', unsafe_allow_html=True)
         st.subheader(f"Hesaplama: {urun['Model Kodu']}")
         
-        col1, col2 = st.columns(2)
-        col1.info(f"Mevcut Alış Fiyatı: **{urun['Alış Fiyatı']:,.2f} TL** (KDV Hariç)")
+        st.info(f"Mevcut Alış Fiyatı: **{urun['Alış Fiyatı']:,.2f} TL** (KDV Hariç)")
         
         with st.form("kampanya_hesaplama_formu"):
-            f_col1, f_col2, f_col3 = st.columns(3)
+            # --- DÜZELTME: Eksik gider alanları eklendi ---
+            f_col1, f_col2 = st.columns(2)
             kampanya_fiyati = f_col1.number_input("Kampanya Satış Fiyatı (KDV Dahil)", min_value=0.01, step=1.0)
             komisyon_orani = f_col2.number_input("Komisyon Oranı (%)", min_value=0.0, value=21.5, step=0.1)
-            urun_kdv_orani = f_col3.number_input("Ürün KDV Oranı (%)", min_value=0.0, value=10.0, step=1.0)
             
+            g_col1, g_col2, g_col3 = st.columns(3)
+            urun_kdv_orani = g_col1.number_input("Ürün KDV Oranı (%)", min_value=0.0, value=10.0, step=1.0)
+            kargo_gideri = g_col2.number_input("Kargo Gideri (TL)", min_value=0.0, value=80.0, step=0.5)
+            reklam_gideri = g_col3.number_input("Birim Reklam Gideri (TL)", min_value=0.0, value=0.0, step=0.1)
+
             submitted = st.form_submit_button("Hesapla", type="primary", use_container_width=True)
 
             if submitted:
@@ -568,8 +575,8 @@ def render_kampanya_fiyati():
                     alis_fiyati_kdvsiz=urun['Alış Fiyatı'],
                     komisyon_orani=komisyon_orani,
                     kdv_orani=urun_kdv_orani,
-                    kargo_gideri=80.0, # Varsayılan veya ayarlanabilir bir değer
-                    reklam_gideri=0.0 # Varsayılan veya ayarlanabilir bir değer
+                    kargo_gideri=kargo_gideri,
+                    reklam_gideri=reklam_gideri
                 )
                 
                 net_kar = sonuclar['net_kar']
