@@ -435,13 +435,13 @@ def render_satis_fiyati_hesaplayici():
         st.markdown('<div class="card">', unsafe_allow_html=True)
         st.subheader("📦 Ürün Arama ve Simülasyon")
         
-        # Veriyi burada bir kere yükle
         if 'df_maliyet' not in st.session_state or st.session_state.df_maliyet.empty:
             load_cost_data()
         df_maliyet = st.session_state.df_maliyet
 
+        # --- DÜZELTME: Hem Enter tuşu hem de buton ile çalışması için form geri eklendi ---
         with st.form(key="arama_ve_hesaplama_formu"):
-            arama_terimi = st.text_input("Model Kodu ile Ürün Ara", "")
+            arama_terimi = st.text_input("Model Kodu ile Ürün Ara", key="sihirbaz_arama_form")
             
             secilen_urun_detay = None
             if arama_terimi:
@@ -457,12 +457,16 @@ def render_satis_fiyati_hesaplayici():
             if secilen_urun_detay:
                 urun = secilen_urun_detay
                 st.success(f"Seçilen ürünün maliyeti (KDV Hariç): {urun['Alış Fiyatı']:,.2f} TL")
-                satis_fiyati_kdvli = st.number_input(f"Satış Fiyatı (KDV Dahil) - Seçilen: {urun['Model Kodu']}", min_value=0.0, format="%.2f", key="satis_fiyati_input")
+                satis_fiyati_kdvli = st.number_input(
+                    f"Satış Fiyatı (KDV Dahil) - Seçilen: {urun['Model Kodu']}", 
+                    min_value=0.0, 
+                    format="%.2f", 
+                    key="satis_fiyati_input_form"
+                )
             
             hesapla_butonu = st.form_submit_button("Hesapla", type="primary")
 
-        # --- DÜZELTME: Sonuçların gösterimi sütunların dışına taşındı ---
-        # Hesaplama butona basıldığında yapılır ve sonuçlar session_state'e kaydedilir.
+        # Hesaplama butona basıldığında veya form gönderildiğinde yapılır.
         if hesapla_butonu and 'satis_fiyati_kdvli' in locals() and satis_fiyati_kdvli > 0:
             kdv_orani = st.session_state.get('tekil_kdv', 10.0)
             komisyon_orani = st.session_state.get('tekil_komisyon', 21.5)
@@ -472,8 +476,7 @@ def render_satis_fiyati_hesaplayici():
 
             st.session_state.sihirbaz_sonuclar = kar_hesapla(satis_fiyati_kdvli, urun_maliyeti, komisyon_orani, kdv_orani, kargo_gideri, reklam_gideri)
         
-        # Arama temizlendiğinde veya ilk açılışta eski sonuçları gösterme
-        if not arama_terimi:
+        elif not arama_terimi:
             st.session_state.sihirbaz_sonuclar = None
 
         st.markdown('</div>', unsafe_allow_html=True)
