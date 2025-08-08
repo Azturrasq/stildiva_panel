@@ -667,7 +667,7 @@ def render_toptan_fiyat_teklifi():
             )
             st.markdown('</div>', unsafe_allow_html=True)
 
-# --- YENİ VE HESAPLAMASI DÜZELTİLMİŞ SİHİRBAZ FONKSİYONU ---
+# --- YENİ VE EXCEL İLE UYUMLU SİHİRBAZ FONKSİYONU ---
 def render_yeni_urun_sihirbazi():
     st.title("🧙‍♂️ Yeni Ürün Satış Fiyatı Sihirbazı")
 
@@ -704,37 +704,48 @@ def render_yeni_urun_sihirbazi():
                 satis_fiyati_input = st.number_input("Satış Fiyatı (KDV Dahil)", min_value=0.01, value=899.95, step=0.01, key="sihirbaz_satis_fiyati")
 
         if st.button("🔮 Sihirbazı Çalıştır", type="primary", use_container_width=True):
-            # --- HESAPLAMA MANTIĞI (TAMAMEN DÜZELTİLDİ) ---
+            # --- HESAPLAMA MANTIĞI (EXCEL İLE %100 UYUMLU) ---
+            kdv_carpan = urun_kdv_orani / 100
+            kdv_bolen = 1 + kdv_carpan
+
             if kdv_durumu == "KDV Dahil":
-                alis_fiyati_kdvsiz = alis_fiyati_input / (1 + urun_kdv_orani / 100)
+                alis_fiyati_kdvsiz = alis_fiyati_input / kdv_bolen
             else:
                 alis_fiyati_kdvsiz = alis_fiyati_input
             
-            # Sabit giderler (komisyon hariç)
-            sabit_giderler = alis_fiyati_kdvsiz + kargo_gideri + reklam_gideri
-            kdv_bolen = 1 + (urun_kdv_orani / 100)
-
             if hesaplama_tipi == "Hedefe Göre Satış Fiyatı Bul":
                 st.warning("Hedefe göre fiyat bulma özelliği henüz tam olarak doğru çalışmamaktadır ve geliştirme aşamasındadır.")
-                # Bu kısım karmaşık denklemler içerdiğinden şimdilik devre dışı bırakıldı.
-                satis_fiyati_kdvli = 0
-                net_kar = 0
-                kar_marji = 0
-
+                satis_fiyati_kdvli = 0; net_kar = 0; kar_marji = 0
+            
             else: # Satış Fiyatına Göre Kâr Hesapla
                 satis_fiyati_kdvli = satis_fiyati_input
                 satis_fiyati_kdvsiz = satis_fiyati_kdvli / kdv_bolen
                 
-                # Komisyon giderini KDV'li fiyattan hesapla
+                # 1. Satıştan gelen KDV'yi hesapla
+                satis_kdv_tutari = satis_fiyati_kdvli - satis_fiyati_kdvsiz
+                
+                # 2. Alıştan kaynaklanan KDV'yi hesapla
+                alis_kdv_tutari = alis_fiyati_kdvsiz * kdv_carpan
+                
+                # 3. Devlete ödenecek Net KDV'yi bul (Bu bir giderdir)
+                net_odenecek_kdv = satis_kdv_tutari - alis_kdv_tutari
+                
+                # 4. Komisyon giderini KDV'li fiyattan hesapla
                 komisyon_gideri = satis_fiyati_kdvli * (komisyon_orani / 100)
                 
-                # Toplam giderleri hesapla (sabit giderler + komisyon)
-                toplam_giderler = sabit_giderler + komisyon_gideri
+                # 5. Toplam giderleri hesapla
+                toplam_giderler = (
+                    alis_fiyati_kdvsiz + 
+                    kargo_gideri + 
+                    reklam_gideri + 
+                    komisyon_gideri + 
+                    net_odenecek_kdv  # Excel'deki gibi Net KDV'yi gider olarak ekle
+                )
                 
-                # Net karı hesapla (KDV'siz gelir - toplam giderler)
+                # 6. Net karı hesapla (KDV'siz gelir - toplam giderler)
                 net_kar = satis_fiyati_kdvsiz - toplam_giderler
                 
-                # Kar marjını hesapla
+                # 7. Kar marjını hesapla
                 kar_marji = (net_kar / satis_fiyati_kdvsiz) * 100 if satis_fiyati_kdvsiz > 0 else 0
 
             st.subheader("Sonuç")
