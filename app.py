@@ -461,6 +461,8 @@ def render_satis_fiyati_hesaplayici():
             
             hesapla_butonu = st.form_submit_button("Hesapla", type="primary")
 
+        # --- DÜZELTME: Sonuçların gösterimi sütunların dışına taşındı ---
+        # Hesaplama butona basıldığında yapılır ve sonuçlar session_state'e kaydedilir.
         if hesapla_butonu and 'satis_fiyati_kdvli' in locals() and satis_fiyati_kdvli > 0:
             kdv_orani = st.session_state.get('tekil_kdv', 10.0)
             komisyon_orani = st.session_state.get('tekil_komisyon', 21.5)
@@ -468,15 +470,25 @@ def render_satis_fiyati_hesaplayici():
             reklam_gideri = st.session_state.get('tekil_reklam', 0.0)
             urun_maliyeti = secilen_urun_detay['Alış Fiyatı']
 
-            sonuclar = kar_hesapla(satis_fiyati_kdvli, urun_maliyeti, komisyon_orani, kdv_orani, kargo_gideri, reklam_gideri)
-            
-            st.subheader("Sonuç")
-            # --- DÜZELTME: Metriklerin kesilmesini önlemek için sütunlar kaldırıldı ---
-            st.metric("Net Kâr (TL)", f"{sonuclar['net_kar']:,.2f} TL")
-            st.metric("Kâr Marjı (%)", f"{sonuclar['kar_marji']:.2f}%")
-            st.metric("Net Maliyet (TL)", f"{sonuclar['toplam_maliyet']:,.2f} TL")
+            st.session_state.sihirbaz_sonuclar = kar_hesapla(satis_fiyati_kdvli, urun_maliyeti, komisyon_orani, kdv_orani, kargo_gideri, reklam_gideri)
+        
+        # Arama temizlendiğinde veya ilk açılışta eski sonuçları gösterme
+        if not arama_terimi:
+            st.session_state.sihirbaz_sonuclar = None
 
         st.markdown('</div>', unsafe_allow_html=True)
+
+    # Sonuçlar, ana sütunların dışında, tam genişlikte gösterilir.
+    if st.session_state.get('sihirbaz_sonuclar'):
+        sonuclar = st.session_state.sihirbaz_sonuclar
+        st.markdown('<div class="card">', unsafe_allow_html=True)
+        st.subheader("Sonuç")
+        res_col1, res_col2, res_col3 = st.columns(3)
+        res_col1.metric("Net Kâr (TL)", f"{sonuclar['net_kar']:,.2f} TL")
+        res_col2.metric("Kâr Marjı (%)", f"{sonuclar['kar_marji']:.2f}%")
+        res_col3.metric("Net Maliyet (TL)", f"{sonuclar['toplam_maliyet']:,.2f} TL")
+        st.markdown('</div>', unsafe_allow_html=True)
+
 
 # --- SİLİNEN VE BOZUK OLAN TOPTAN FİYAT TEKLİFİ FONKSİYONU BURAYA DOĞRU ŞEKİLDE EKLENİYOR ---
 def render_toptan_fiyat_teklifi():
