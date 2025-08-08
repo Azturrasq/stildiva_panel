@@ -493,7 +493,15 @@ def render_satis_fiyati_hesaplayici():
 # --- EKSİK FONKSİYON BURAYA EKLENİYOR ---
 def render_toptan_fiyat_teklifi():
     st.title("📑 Toptan Fiyat Teklifi Oluşturucu")
-    df_maliyet = load_cost_data()
+    
+    # --- HATA DÜZELTME: Veri doğru yerden okunuyor ---
+    if 'df_maliyet' not in st.session_state or st.session_state.df_maliyet.empty:
+        load_cost_data() # Veriyi session state'e yükle
+    df_maliyet = st.session_state.df_maliyet # Veriyi session state'den al
+
+    if df_maliyet.empty:
+        st.error("Maliyet verileri yüklenemedi. Lütfen Google Sheets bağlantınızı kontrol edin.")
+        return
 
     with st.container():
         st.markdown('<div class="card">', unsafe_allow_html=True)
