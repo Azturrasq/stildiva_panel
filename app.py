@@ -507,119 +507,97 @@ def render_yeni_urun_sihirbazi():
     with st.container():
         st.markdown('<div class="card">', unsafe_allow_html=True)
         
-        hesaplama_tipi = st.radio(
-            "Hesaplama Yönü Seçin",
-            ["Satış Fiyatına Göre Kâr Hesapla", "Hedefe Göre Satış Fiyatı Bul"],
-            index=0,
-            key="sihirbaz_hesaplama_tipi",
-            horizontal=True
-        )
-        
-        st.markdown("---")
+        # --- DÜZELTME: Tüm girdiler tek bir form içine ve mantıksal sıraya konuldu ---
+        with st.form("yeni_urun_sihirbazi_formu"):
+            st.subheader("📊 Maliyet Girdileri")
+            
+            urun_kdv_orani = st.number_input("Ürünün KDV Oranı (%)", min_value=0.0, value=10.0, step=1.0, key="sihirbaz_kdv")
+            komisyon_orani = st.number_input("Platform Komisyon Oranı (%)", min_value=0.0, value=21.5, step=0.1, key="sihirbaz_komisyon")
+            alis_fiyati_input = st.number_input("Ürün Alış Fiyatı (TL)", min_value=0.0, value=270.0, step=0.01, key="sihirbaz_alis")
+            kdv_durumu = st.radio("Alış Fiyatı KDV Durumu", ["KDV Dahil", "KDV Hariç"], index=1, horizontal=True, key="sihirbaz_kdv_durum")
+            kargo_gideri = st.number_input("Kargo Gideri (TL)", min_value=0.0, value=80.0, step=0.5, key="sihirbaz_kargo")
+            reklam_gideri = st.number_input("Birim Reklam Gideri (TL)", min_value=0.0, value=30.0, step=0.1, key="sihirbaz_reklam")
+            
+            st.markdown("---")
 
-        # --- DÜZELTME: Bölümlerin sırası isteğiniz doğrultusunda değiştirildi ---
-        
-        satis_fiyati_kdvli = 0
-        submitted = False
-        hedef_deger = None # Tanımlama
-        hedef_tipi = None # Tanımlama
+            # --- DÜZELTME: Fiyat/Hedef bölümü en alta taşındı ---
+            st.subheader("🎯 Fiyat ve Hedef Belirleme")
+            hesaplama_tipi = st.radio(
+                "Hesaplama Yönü Seçin",
+                ["Hedefe Göre Satış Fiyatı Bul", "Satış Fiyatına Göre Kâr Hesapla"],
+                index=1,
+                key="sihirbaz_hesaplama_tipi"
+            )
 
-        # 1. Fiyat/Hedef Giriş Bölümü
-        if hesaplama_tipi == "Satış Fiyatına Göre Kâr Hesapla":
-            st.subheader("🎯 Fiyat Bilgisi")
-            with st.form("kar_hesapla_form"):
-                satis_fiyati_input = st.number_input("Satış Fiyatı (KDV Dahil)", min_value=0.01, value=899.95, step=0.01, key="sihirbaz_satis_fiyati")
-                
-                # Maliyet girdileri formun içine taşındı
-                st.subheader("📊 Maliyet Girdileri")
-                urun_kdv_orani = st.number_input("Ürünün KDV Oranı (%)", min_value=0.0, value=10.0, step=1.0, key="sihirbaz_kdv_1")
-                komisyon_orani = st.number_input("Platform Komisyon Oranı (%)", min_value=0.0, value=21.5, step=0.1, key="sihirbaz_komisyon_1")
-                alis_fiyati_input = st.number_input("Ürün Alış Fiyatı (TL)", min_value=0.0, value=270.0, step=0.01, key="sihirbaz_alis_1")
-                kdv_durumu = st.radio("Alış Fiyatı KDV Durumu", ["KDV Dahil", "KDV Hariç"], index=1, horizontal=True, key="sihirbaz_kdv_durum_1")
-                kargo_gideri = st.number_input("Kargo Gideri (TL)", min_value=0.0, value=80.0, step=0.5, key="sihirbaz_kargo_1")
-                reklam_gideri = st.number_input("Birim Reklam Gideri (TL)", min_value=0.0, value=30.0, step=0.1, key="sihirbaz_reklam_1")
-
-                submitted = st.form_submit_button("🔮 Kâr Hesapla", type="primary", use_container_width=True)
-                if submitted:
-                    satis_fiyati_kdvli = satis_fiyati_input
-
-        elif hesaplama_tipi == "Hedefe Göre Satış Fiyatı Bul":
-            st.subheader("🎯 Hedef Belirleme")
-            with st.form("fiyat_bul_form"):
+            if 'sihirbaz_hesaplama_tipi' in st.session_state and st.session_state.sihirbaz_hesaplama_tipi == "Hedefe Göre Satış Fiyatı Bul":
                 hedef_tipi = st.selectbox("Hedef Türü", ["% Kâr Marjı", "Net Kâr Tutarı (TL)"], key="sihirbaz_hedef_tipi")
-                if hedef_tipi == "% Kâr Marjı":
+                if 'sihirbaz_hedef_tipi' in st.session_state and st.session_state.sihirbaz_hedef_tipi == "% Kâr Marjı":
                     hedef_deger = st.number_input("Hedef Kâr Marjı (%)", min_value=0.0, max_value=99.9, value=25.0, step=0.5, key="sihirbaz_hedef_marj")
                 else:
                     hedef_deger = st.number_input("Hedef Net Kâr (TL)", min_value=0.0, value=100.0, step=1.0, key="sihirbaz_hedef_tutar")
+            else:
+                satis_fiyati_input = st.number_input("Satış Fiyatı (KDV Dahil)", min_value=0.01, value=899.95, step=0.01, key="sihirbaz_satis_fiyati")
+            
+            submitted = st.form_submit_button("🔮 Sihirbazı Çalıştır", type="primary", use_container_width=True)
+
+        if submitted:
+            # Form gönderildiğinde session state'den değerleri al
+            hesaplama_tipi_submitted = st.session_state.sihirbaz_hesaplama_tipi
+            satis_fiyati_kdvli = 0
+
+            kdv_carpan = st.session_state.sihirbaz_kdv / 100
+            kdv_bolen = 1 + kdv_carpan
+            alis_fiyati_val = st.session_state.sihirbaz_alis
+            kdv_durumu_val = st.session_state.sihirbaz_kdv_durum
+            komisyon_orani_val = st.session_state.sihirbaz_komisyon
+            kargo_gideri_val = st.session_state.sihirbaz_kargo
+            reklam_gideri_val = st.session_state.sihirbaz_reklam
+
+            if kdv_durumu_val == "KDV Dahil":
+                alis_fiyati_kdvsiz = alis_fiyati_val / kdv_bolen
+            else:
+                alis_fiyati_kdvsiz = alis_fiyati_val
+            
+            if hesaplama_tipi_submitted == "Hedefe Göre Satış Fiyatı Bul":
+                hedef_tipi_val = st.session_state.sihirbaz_hedef_tipi
+                sabit_giderler = alis_fiyati_kdvsiz + kargo_gideri_val + reklam_gideri_val
+                alis_kdv_tutari = alis_fiyati_kdvsiz * kdv_carpan
+
+                if hedef_tipi_val == "% Kâr Marjı":
+                    hedef_deger_val = st.session_state.sihirbaz_hedef_marj
+                    hedef_kar_marji = hedef_deger_val / 100
+                    pay = sabit_giderler - alis_kdv_tutari
+                    payda = 1 - hedef_kar_marji - (kdv_bolen * (komisyon_orani_val / 100)) - kdv_carpan
+                else: # Hedef Net Kâr (TL)
+                    hedef_deger_val = st.session_state.sihirbaz_hedef_tutar
+                    hedef_net_kar = hedef_deger_val
+                    pay = sabit_giderler - alis_kdv_tutari + hedef_net_kar
+                    payda = 1 - (kdv_bolen * (komisyon_orani_val / 100)) - kdv_carpan
+
+                if payda <= 0:
+                    st.error("Bu hedefe ulaşılamıyor. Lütfen komisyon veya kâr hedefini düşürün.")
+                else:
+                    satis_fiyati_kdvsiz = pay / payda
+                    satis_fiyati_kdvli = satis_fiyati_kdvsiz * kdv_bolen
+            
+            else: # Satış Fiyatına Göre Kâr Hesapla
+                satis_fiyati_kdvli = st.session_state.sihirbaz_satis_fiyati
+
+            if satis_fiyati_kdvli > 0:
+                sonuclar = kar_hesapla(satis_fiyati_kdvli, alis_fiyati_kdvsiz, komisyon_orani_val, st.session_state.sihirbaz_kdv, kargo_gideri_val, reklam_gideri_val)
+                net_kar = sonuclar['net_kar']
+                kar_marji = sonuclar['kar_marji']
+
+                st.subheader("Sonuç")
+                if net_kar > 0:
+                    st.success("Bu satıştan kâr ediyorsunuz.")
+                else:
+                    st.error("Bu satıştan zarar ediyorsunuz.")
                 
-                # Maliyet girdileri formun içine taşındı
-                st.subheader("📊 Maliyet Girdileri")
-                urun_kdv_orani = st.number_input("Ürünün KDV Oranı (%)", min_value=0.0, value=10.0, step=1.0, key="sihirbaz_kdv_2")
-                komisyon_orani = st.number_input("Platform Komisyon Oranı (%)", min_value=0.0, value=21.5, step=0.1, key="sihirbaz_komisyon_2")
-                alis_fiyati_input = st.number_input("Ürün Alış Fiyatı (TL)", min_value=0.0, value=270.0, step=0.01, key="sihirbaz_alis_2")
-                kdv_durumu = st.radio("Alış Fiyatı KDV Durumu", ["KDV Dahil", "KDV Hariç"], index=1, horizontal=True, key="sihirbaz_kdv_durum_2")
-                kargo_gideri = st.number_input("Kargo Gideri (TL)", min_value=0.0, value=80.0, step=0.5, key="sihirbaz_kargo_2")
-                reklam_gideri = st.number_input("Birim Reklam Gideri (TL)", min_value=0.0, value=30.0, step=0.1, key="sihirbaz_reklam_2")
-
-                submitted = st.form_submit_button("🔮 Fiyat Bul", type="primary", use_container_width=True)
-                if submitted:
-                    kdv_carpan_calc = urun_kdv_orani / 100
-                    kdv_bolen_calc = 1 + kdv_carpan_calc
-                    alis_fiyati_kdvsiz_calc = alis_fiyati_input / kdv_bolen_calc if kdv_durumu == "KDV Dahil" else alis_fiyati_input
-                    
-                    sabit_giderler = alis_fiyati_kdvsiz_calc + kargo_gideri + reklam_gideri
-                    alis_kdv_tutari = alis_fiyati_kdvsiz_calc * kdv_carpan_calc
-
-                    if hedef_tipi == "% Kâr Marjı":
-                        hedef_kar_marji = hedef_deger / 100
-                        pay = sabit_giderler - alis_kdv_tutari
-                        payda = 1 - hedef_kar_marji - (kdv_bolen_calc * (komisyon_orani / 100)) - kdv_carpan_calc
-                    else: # Hedef Net Kâr (TL)
-                        hedef_net_kar = hedef_deger
-                        pay = sabit_giderler - alis_kdv_tutari + hedef_net_kar
-                        payda = 1 - (kdv_bolen_calc * (komisyon_orani / 100)) - kdv_carpan_calc
-
-                    if payda <= 0:
-                        st.error("Bu hedefe ulaşılamıyor. Lütfen komisyon veya kâr hedefini düşürün.")
-                    else:
-                        satis_fiyati_kdvsiz = pay / payda
-                        satis_fiyati_kdvli = satis_fiyati_kdvsiz * kdv_bolen_calc
-
-        # 2. Sonuç Bölümü
-        if submitted and satis_fiyati_kdvli > 0:
-            # Hesaplama için doğru değişkenleri al
-            if hesaplama_tipi == "Satış Fiyatına Göre Kâr Hesapla":
-                urun_kdv_orani_hesap = st.session_state.sihirbaz_kdv_1
-                komisyon_orani_hesap = st.session_state.sihirbaz_komisyon_1
-                alis_fiyati_input_hesap = st.session_state.sihirbaz_alis_1
-                kdv_durumu_hesap = st.session_state.sihirbaz_kdv_durum_1
-                kargo_gideri_hesap = st.session_state.sihirbaz_kargo_1
-                reklam_gideri_hesap = st.session_state.sihirbaz_reklam_1
-            else:
-                urun_kdv_orani_hesap = st.session_state.sihirbaz_kdv_2
-                komisyon_orani_hesap = st.session_state.sihirbaz_komisyon_2
-                alis_fiyati_input_hesap = st.session_state.sihirbaz_alis_2
-                kdv_durumu_hesap = st.session_state.sihirbaz_kdv_durum_2
-                kargo_gideri_hesap = st.session_state.sihirbaz_kargo_2
-                reklam_gideri_hesap = st.session_state.sihirbaz_reklam_2
-
-            kdv_bolen = 1 + (urun_kdv_orani_hesap / 100)
-            alis_fiyati_kdvsiz = alis_fiyati_input_hesap / kdv_bolen if kdv_durumu_hesap == "KDV Dahil" else alis_fiyati_input_hesap
-            
-            sonuclar = kar_hesapla(satis_fiyati_kdvli, alis_fiyati_kdvsiz, komisyon_orani_hesap, urun_kdv_orani_hesap, kargo_gideri_hesap, reklam_gideri_hesap)
-            net_kar = sonuclar['net_kar']
-            kar_marji = sonuclar['kar_marji']
-
-            st.subheader("Sonuç")
-            if net_kar > 0:
-                st.success("Bu satıştan kâr ediyorsunuz.")
-            else:
-                st.error("Bu satıştan zarar ediyorsunuz.")
-            
-            res_col1, res_col2, res_col3 = st.columns(3)
-            res_col1.metric("Satış Fiyatı (KDV Dahil)", f"{satis_fiyati_kdvli:,.2f} TL")
-            res_col2.metric("Net Kâr / Zarar", f"{net_kar:,.2f} TL")
-            res_col3.metric("Kâr Marjı", f"{kar_marji:.2f}%")
+                res_col1, res_col2, res_col3 = st.columns(3)
+                res_col1.metric("Satış Fiyatı (KDV Dahil)", f"{satis_fiyati_kdvli:,.2f} TL")
+                res_col2.metric("Net Kâr / Zarar", f"{net_kar:,.2f} TL")
+                res_col3.metric("Kâr Marjı", f"{kar_marji:.2f}%")
 
         st.markdown('</div>', unsafe_allow_html=True)
 
@@ -669,7 +647,7 @@ if st.session_state["authentication_status"]:
         "Toptan Fiyat Teklifi": render_toptan_fiyat_teklifi,
         "Aylık Hedef Analizi": render_hedef_analizi,
         "Maliyet Yönetimi": render_maliyet_yonetimi,
-        "🧙‍♂️ Yeni Ürün Sihirbazı": render_yeni_urun_sihirbazi
+        "🧙‍♂️ Yeni Ürün Sihirbazi": render_yeni_urun_sihirbazi
     }
     page_map[app_mode]()
 
