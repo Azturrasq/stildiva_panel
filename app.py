@@ -490,66 +490,87 @@ def render_satis_fiyati_hesaplayici():
 
         st.markdown('</div>', unsafe_allow_html=True)
 
-# --- ESKİ TOPTAN SATIŞ FONKSİYONUNU SİLİP BUNU YAPIŞTIR ---
+# --- ESKİ, YANLIŞ TOPTAN SATIŞ FONKSİYONUNU SİLİP, BU DOĞRU VERSİYONU YAPIŞTIR ---
 def render_toptan_fiyat_teklifi():
-    st.title("🧮 Toptan Satış Fiyatı Hesaplayıcı")
+    st.title("📑 Toplu Fiyat Listesi Oluşturucu")
+    st.info("Bu araç, Google Sheets'teki tüm ürünleriniz için belirlediğiniz hedeflere göre toplu bir satış fiyatı listesi oluşturur.")
+
+    # 1. Maliyet verilerini yükle
+    load_cost_data()
+    df_maliyet = st.session_state.df_maliyet.copy()
+
+    if df_maliyet.empty:
+        st.error("Maliyet verileri yüklenemedi. Lütfen Google Sheets bağlantınızı veya 'Maliyet Yönetimi' sayfasını kontrol edin.")
+        return
 
     with st.container():
         st.markdown('<div class="card">', unsafe_allow_html=True)
         
+        st.subheader("Satış Parametreleri (Tüm Ürünlere Uygulanacak)")
         col1, col2 = st.columns(2)
 
         with col1:
-            st.subheader("Maliyet Girdileri")
-            alis_fiyati = st.number_input("Ürün Alış Fiyatı (TL)", min_value=0.0, value=270.0, step=1.0)
-            alis_kdv_durumu = st.radio("Alış Fiyatı KDV Durumu", ["KDV Dahil", "KDV Hariç"], index=1, horizontal=True)
-            reklam_gideri = st.number_input("Birim Başına Reklam Gideri (TL)", min_value=0.0, value=0.0, step=1.0)
-
-        with col2:
-            st.subheader("Satış Parametreleri")
             komisyon_orani = st.number_input("Komisyon Oranı (%)", min_value=0.0, value=21.5, step=0.1)
             urun_kdv_orani = st.number_input("Ürün Satış KDV Oranı (%)", min_value=0.0, value=10.0, step=1.0)
-            hedef_tipi = st.selectbox("Hedef Türü", ["Net Kâr Tutarı (TL)", "% Kâr Marjı"])
 
+        with col2:
+            hedef_tipi = st.selectbox("Hedef Türü", ["% Kâr Marjı", "Net Kâr Tutarı (TL)"])
             if hedef_tipi == "% Kâr Marjı":
                 hedef_deger = st.number_input("Hedef Kâr Marjı (%)", min_value=0.0, max_value=99.9, value=25.0, step=0.5)
             else:
                 hedef_deger = st.number_input("Hedef Net Kâr (TL)", min_value=0.0, value=100.0, step=1.0)
 
-        if st.button("Hesapla", type="primary", use_container_width=True):
+        if st.button("Fiyat Listesini Oluştur", type="primary", use_container_width=True):
             kdv_carpan = urun_kdv_orani / 100
             kdv_bolen = 1 + kdv_carpan
-
-            alis_fiyati_kdvsiz = alis_fiyati / kdv_bolen if alis_kdv_durumu == "KDV Dahil" else alis_fiyati
+            
+            # Alış fiyatları zaten KDV'siz olarak kabul ediliyor.
+            alis_fiyati_kdvsiz = df_maliyet['Alış Fiyatı']
             alis_kdv_tutari = alis_fiyati_kdvsiz * kdv_carpan
             
-            sabit_giderler = alis_fiyati_kdvsiz + reklam_gideri
-
-            # Denklemi çözmek için pay ve paydayı hesapla
+            # Denklemi çözmek için pay ve paydayı hesapla (Vektörel işlem)
             if hedef_tipi == "% Kâr Marjı":
                 hedef_kar_marji = hedef_deger / 100
-                pay = sabit_giderler - alis_kdv_tutari
+                pay = alis_fiyati_kdvsiz - alis_kdv_tutari
                 payda = 1 - (komisyon_orani / 100 * kdv_bolen) - kdv_carpan - hedef_kar_marji
             else: # Hedef Net Kâr (TL)
                 hedef_net_kar = hedef_deger
-                pay = sabit_giderler - alis_kdv_tutari + hedef_net_kar
+                pay = alis_fiyati_kdvsiz - alis_kdv_tutari + hedef_net_kar
                 payda = 1 - (komisyon_orani / 100 * kdv_bolen) - kdv_carpan
 
             if payda <= 0:
                 st.error("Bu hedefe ulaşılamıyor. Lütfen komisyon veya kâr hedefini düşürün.")
             else:
                 satis_fiyati_kdvsiz = pay / payda
-                satis_fiyati_kdvli = satis_fiyati_kdvsiz * kdv_bolen
+                df_maliyet['Hesaplanan Satış Fiyatı (KDV Dahil)'] = satis_fiyati_kdvsiz * kdv_bolen
                 
                 # Sağlama yap
-                sonuclar = kar_hesapla(satis_fiyati_kdvli, alis_fiyati_kdvsiz, komisyon_orani, urun_kdv_orani, 0, reklam_gideri)
+                sonuclar = df_maliyet.apply(
+                    lambda row: kar_hesapla(
+                        row['Hesaplanan Satış Fiyatı (KDV Dahil)'], 
+                        row['Alış Fiyatı'], 
+                        komisyon_orani, 
+                        urun_kdv_orani, 
+                        0, 0 # Kargo ve Reklam bu araçta yok
+                    ), axis=1, result_type='expand'
+                )
+                sonuclar.columns = ['Gerçekleşen Net Kâr', 'Gerçekleşen Kâr Marjı', 'Toplam Maliyet']
+                
+                df_sonuc = pd.concat([df_maliyet, sonuclar], axis=1)
 
-                st.subheader("Sonuç")
-                res_col1, res_col2, res_col3 = st.columns(3)
-                res_col1.metric("Önerilen Satış Fiyatı (KDV Dahil)", f"{satis_fiyati_kdvli:,.2f} TL")
-                res_col2.metric("Gerçekleşen Net Kâr", f"{sonuclar['net_kar']:,.2f} TL")
-                res_col3.metric("Gerçekleşen Kâr Marjı", f"{sonuclar['kar_marji']:.2f}%")
-
+                st.subheader("Oluşturulan Fiyat Listesi")
+                st.dataframe(
+                    df_sonuc[[
+                        'Model Kodu', 'Alış Fiyatı', 'Hesaplanan Satış Fiyatı (KDV Dahil)', 
+                        'Gerçekleşen Net Kâr', 'Gerçekleşen Kâr Marjı'
+                    ]].style.format({
+                        'Alış Fiyatı': '{:,.2f} TL',
+                        'Hesaplanan Satış Fiyatı (KDV Dahil)': '{:,.2f} TL',
+                        'Gerçekleşen Net Kâr': '{:,.2f} TL',
+                        'Gerçekleşen Kâr Marjı': '{:.2f}%'
+                    }),
+                    use_container_width=True
+                )
         st.markdown('</div>', unsafe_allow_html=True)
 
 def render_satis_fiyati_hesaplayici():
