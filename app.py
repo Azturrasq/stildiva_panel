@@ -410,87 +410,7 @@ def render_hedef_analizi():
                     st.info(f"Hedefe ulaşmak için günlük kârınızı **%{((gereken_gunluk_kar / gunluk_ortalama_kar) - 1) * 100 if gereken_gunluk_kar > 0 else -100:.1f}** artırmanız gerekmektedir.")
         st.markdown('</div>', unsafe_allow_html=True)
 
-# --- ESKİ SATIŞ FİYATI HESAPLAYICIYI SİLİP, BU DOĞRU VERSİYONU YAPIŞTIR ---
-def render_satis_fiyati_hesaplayici():
-    st.title("🏷️ Satış Fiyatı Hesaplayıcı")
-    left_col, right_col = st.columns([2, 3])
-
-    with left_col:
-        st.markdown('<div class="card">', unsafe_allow_html=True)
-        st.subheader("⚙️ Varsayılan Maliyetler")
-        
-        # --- HATA DÜZELTME: Komisyon alanı olması gereken yere taşındı ---
-        if 'tekil_komisyon' not in st.session_state: st.session_state.tekil_komisyon = 21.5
-        if 'tekil_kdv' not in st.session_state: st.session_state.tekil_kdv = 10.0
-        if 'tekil_kargo' not in st.session_state: st.session_state.tekil_kargo = 80.0
-        if 'tekil_reklam' not in st.session_state: st.session_state.tekil_reklam = 0.0
-
-        st.session_state.tekil_komisyon = st.number_input("Komisyon Oranı (%)", min_value=0.0, value=st.session_state.tekil_komisyon, key='s_kom')
-        st.session_state.tekil_kdv = st.number_input("KDV Oranı (%)", min_value=0.0, value=st.session_state.tekil_kdv, key='s_kdv')
-        st.session_state.tekil_kargo = st.number_input("Kargo Gideri (TL)", min_value=0.0, value=st.session_state.tekil_kargo, key='s_kar')
-        st.session_state.tekil_reklam = st.number_input("Reklam Gideri (TL)", min_value=0.0, value=st.session_state.tekil_reklam, key='s_rek')
-        st.markdown('</div>', unsafe_allow_html=True)
-
-    with right_col:
-        st.markdown('<div class="card">', unsafe_allow_html=True)
-        st.subheader("📦 Ürün Arama ve Simülasyon")
-        
-        if 'df_maliyet' not in st.session_state or st.session_state.df_maliyet.empty:
-            load_cost_data()
-        df_maliyet = st.session_state.df_maliyet
-
-        # --- DÜZELTME: Hem Enter tuşu hem de buton ile çalışması için form geri eklendi ---
-        with st.form(key="arama_ve_hesaplama_formu"):
-            arama_terimi = st.text_input("Model Kodu ile Ürün Ara", key="sihirbaz_arama_form")
-            
-            secilen_urun_detay = None
-            if arama_terimi:
-                sonuclar = df_maliyet[df_maliyet['Model Kodu'].str.contains(arama_terimi, case=False, na=False)]
-                if not sonuclar.empty:
-                    secenekler = sonuclar['Model Kodu'].unique()
-                    secilen_model_kodu = st.selectbox("Bulunan Modeller", options=secenekler, index=0)
-                    if secilen_model_kodu:
-                        secilen_urun_detay = sonuclar[sonuclar['Model Kodu'] == secilen_model_kodu].iloc[0].to_dict()
-                else:
-                    st.warning("Aradığınız kriterlere uygun ürün bulunamadı.")
-
-            if secilen_urun_detay:
-                urun = secilen_urun_detay
-                st.success(f"Seçilen ürünün maliyeti (KDV Hariç): {urun['Alış Fiyatı']:,.2f} TL")
-                satis_fiyati_kdvli = st.number_input(
-                    f"Satış Fiyatı (KDV Dahil) - Seçilen: {urun['Model Kodu']}", 
-                    min_value=0.0, 
-                    format="%.2f", 
-                    key="satis_fiyati_input_form"
-                )
-            
-            hesapla_butonu = st.form_submit_button("Hesapla", type="primary")
-
-        # Hesaplama butona basıldığında veya form gönderildiğinde yapılır.
-        if hesapla_butonu and 'satis_fiyati_kdvli' in locals() and satis_fiyati_kdvli > 0:
-            kdv_orani = st.session_state.get('tekil_kdv', 10.0)
-            komisyon_orani = st.session_state.get('tekil_komisyon', 21.5)
-            kargo_gideri = st.session_state.get('tekil_kargo', 80.0)
-            reklam_gideri = st.session_state.get('tekil_reklam', 0.0)
-            urun_maliyeti = secilen_urun_detay['Alış Fiyatı']
-
-            st.session_state.sihirbaz_sonuclar = kar_hesapla(satis_fiyati_kdvli, urun_maliyeti, komisyon_orani, kdv_orani, kargo_gideri, reklam_gideri)
-        
-        elif not arama_terimi:
-            st.session_state.sihirbaz_sonuclar = None
-
-        st.markdown('</div>', unsafe_allow_html=True)
-
-    # Sonuçlar, ana sütunların dışında, tam genişlikte gösterilir.
-    if st.session_state.get('sihirbaz_sonuclar'):
-        sonuclar = st.session_state.sihirbaz_sonuclar
-        st.markdown('<div class="card">', unsafe_allow_html=True)
-        st.subheader("Sonuç")
-        res_col1, res_col2, res_col3 = st.columns(3)
-        res_col1.metric("Net Kâr (TL)", f"{sonuclar['net_kar']:,.2f} TL")
-        res_col2.metric("Kâr Marjı (%)", f"{sonuclar['kar_marji']:.2f}%")
-        res_col3.metric("Net Maliyet (TL)", f"{sonuclar['toplam_maliyet']:,.2f} TL")
-        st.markdown('</div>', unsafe_allow_html=True)
+# --- ESKİ SATIŞ FİYATI HESAPLAYICI FONKSİYONU SİLİNDİ ---
 
 
 # --- SİLİNEN VE BOZUK OLAN TOPTAN FİYAT TEKLİFİ FONKSİYONU BURAYA DOĞRU ŞEKİLDE EKLENİYOR ---
@@ -707,7 +627,7 @@ if st.session_state["authentication_status"]:
         st.subheader("Sihirbazlar")
         app_mode = st.selectbox(
             "Hangi aracı kullanmak istersiniz?",
-            ["Kârlılık Analizi", "Toptan Fiyat Teklifi", "Satış Fiyatı Hesaplayıcı", "Aylık Hedef Analizi", "Maliyet Yönetimi", "🧙‍♂️ Yeni Ürün Sihirbazı"],
+            ["🧙‍♂️ Yeni Ürün Sihirbazı", "Toptan Fiyat Teklifi", "Kârlılık Analizi", "Aylık Hedef Analizi", "Maliyet Yönetimi"],
             label_visibility="collapsed"
         )
 
@@ -715,7 +635,6 @@ if st.session_state["authentication_status"]:
     page_map = {
         "Kârlılık Analizi": render_karlilik_analizi,
         "Toptan Fiyat Teklifi": render_toptan_fiyat_teklifi,
-        "Satış Fiyatı Hesaplayıcı": render_satis_fiyati_hesaplayici,
         "Aylık Hedef Analizi": render_hedef_analizi,
         "Maliyet Yönetimi": render_maliyet_yonetimi,
         "🧙‍♂️ Yeni Ürün Sihirbazı": render_yeni_urun_sihirbazi
