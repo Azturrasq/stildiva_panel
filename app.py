@@ -537,9 +537,11 @@ def render_yeni_urun_sihirbazi():
                         hedef_deger = st.number_input("Hedef Net Kâr (TL)", min_value=0.0, value=100.0, step=1.0, key="sihirbaz_hedef_tutar")
                 else:
                     satis_fiyati_input = st.number_input("Satış Fiyatı (KDV Dahil)", min_value=0.01, value=899.95, step=0.01, key="sihirbaz_satis_fiyati")
+                
+                # --- DÜZELTME: Buton doğru sütuna taşındı ---
+                submitted = st.form_submit_button("🔮 Sihirbazı Çalıştır", type="primary", use_container_width=True)
             
-            # --- DÜZELTME: Buton yeniden konumlandırıldı ve boyutlandırıldı ---
-            submitted = st.form_submit_button("🔮 Sihirbazı Çalıştır", type="primary", use_container_width=True)
+            # --- HATA: Buton yanlış konumdaydı, yukarı taşındı ---
 
         if submitted:
             # --- HESAPLAMA MANTIĞI ---
