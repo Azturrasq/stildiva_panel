@@ -13,6 +13,11 @@ from gspread_dataframe import get_as_dataframe, set_with_dataframe
 from google.oauth2.service_account import Credentials
 import gspread
 
+# --- YENİ: CSS Dosyasını Yüklemek İçin Yardımcı Fonksiyon ---
+def load_css(file_name):
+    with open(file_name) as f:
+        st.markdown(f'<style>{f.read()}</style>', unsafe_allow_html=True)
+
 # --- SİLİNDİ: Benim eklediğim tüm karmaşık ve hatalı fonksiyonlar kaldırıldı ---
 
 # --- YENİ: SADECE WEB İÇİN KİMLİK DOĞRULAMA ---
