@@ -490,75 +490,147 @@ def render_satis_fiyati_hesaplayici():
 
         st.markdown('</div>', unsafe_allow_html=True)
 
-# --- EKSİK FONKSİYON BURAYA EKLENİYOR ---
+# --- ESKİ TOPTAN SATIŞ FONKSİYONUNU SİLİP BUNU YAPIŞTIR ---
 def render_toptan_fiyat_teklifi():
-    st.title("📑 Toptan Fiyat Teklifi Oluşturucu")
-    
-    # --- HATA DÜZELTME: Veri doğru yerden okunuyor ---
-    if 'df_maliyet' not in st.session_state or st.session_state.df_maliyet.empty:
-        load_cost_data() # Veriyi session state'e yükle
-    df_maliyet = st.session_state.df_maliyet # Veriyi session state'den al
-
-    if df_maliyet.empty:
-        st.error("Maliyet verileri yüklenemedi. Lütfen Google Sheets bağlantınızı kontrol edin.")
-        return
+    st.title("🧮 Toptan Satış Fiyatı Hesaplayıcı")
 
     with st.container():
         st.markdown('<div class="card">', unsafe_allow_html=True)
-        st.subheader("Ürün Seçimi ve Adet Belirleme")
         
-        if 'teklif_listesi' not in st.session_state:
-            st.session_state.teklif_listesi = []
+        col1, col2 = st.columns(2)
 
-        options = df_maliyet['Model Kodu'].unique()
-        secilen_model = st.selectbox("Teklife Eklenecek Ürünü Seçin", options, index=None, placeholder="Model Kodu seçin...")
+        with col1:
+            st.subheader("Maliyet Girdileri")
+            alis_fiyati = st.number_input("Ürün Alış Fiyatı (TL)", min_value=0.0, value=270.0, step=1.0)
+            alis_kdv_durumu = st.radio("Alış Fiyatı KDV Durumu", ["KDV Dahil", "KDV Hariç"], index=1, horizontal=True)
+            reklam_gideri = st.number_input("Birim Başına Reklam Gideri (TL)", min_value=0.0, value=0.0, step=1.0)
 
-        if secilen_model:
-            secilen_adet = st.number_input(f"'{secilen_model}' için adet girin", min_value=1, value=10, step=1)
-            if st.button("➕ Ürünü Teklife Ekle", key=f"ekle_{secilen_model}"):
-                urun_detay = df_maliyet[df_maliyet['Model Kodu'] == secilen_model].iloc[0]
-                st.session_state.teklif_listesi.append({
-                    "Model Kodu": urun_detay['Model Kodu'],
-                    "Adet": secilen_adet,
-                    "Birim Maliyet": urun_detay['Alış Fiyatı']
-                })
-                st.success(f"{secilen_adet} adet '{secilen_model}' teklife eklendi.")
+        with col2:
+            st.subheader("Satış Parametreleri")
+            komisyon_orani = st.number_input("Komisyon Oranı (%)", min_value=0.0, value=21.5, step=0.1)
+            urun_kdv_orani = st.number_input("Ürün Satış KDV Oranı (%)", min_value=0.0, value=10.0, step=1.0)
+            hedef_tipi = st.selectbox("Hedef Türü", ["Net Kâr Tutarı (TL)", "% Kâr Marjı"])
+
+            if hedef_tipi == "% Kâr Marjı":
+                hedef_deger = st.number_input("Hedef Kâr Marjı (%)", min_value=0.0, max_value=99.9, value=25.0, step=0.5)
+            else:
+                hedef_deger = st.number_input("Hedef Net Kâr (TL)", min_value=0.0, value=100.0, step=1.0)
+
+        if st.button("Hesapla", type="primary", use_container_width=True):
+            kdv_carpan = urun_kdv_orani / 100
+            kdv_bolen = 1 + kdv_carpan
+
+            alis_fiyati_kdvsiz = alis_fiyati / kdv_bolen if alis_kdv_durumu == "KDV Dahil" else alis_fiyati
+            alis_kdv_tutari = alis_fiyati_kdvsiz * kdv_carpan
+            
+            sabit_giderler = alis_fiyati_kdvsiz + reklam_gideri
+
+            # Denklemi çözmek için pay ve paydayı hesapla
+            if hedef_tipi == "% Kâr Marjı":
+                hedef_kar_marji = hedef_deger / 100
+                pay = sabit_giderler - alis_kdv_tutari
+                payda = 1 - (komisyon_orani / 100 * kdv_bolen) - kdv_carpan - hedef_kar_marji
+            else: # Hedef Net Kâr (TL)
+                hedef_net_kar = hedef_deger
+                pay = sabit_giderler - alis_kdv_tutari + hedef_net_kar
+                payda = 1 - (komisyon_orani / 100 * kdv_bolen) - kdv_carpan
+
+            if payda <= 0:
+                st.error("Bu hedefe ulaşılamıyor. Lütfen komisyon veya kâr hedefini düşürün.")
+            else:
+                satis_fiyati_kdvsiz = pay / payda
+                satis_fiyati_kdvli = satis_fiyati_kdvsiz * kdv_bolen
+                
+                # Sağlama yap
+                sonuclar = kar_hesapla(satis_fiyati_kdvli, alis_fiyati_kdvsiz, komisyon_orani, urun_kdv_orani, 0, reklam_gideri)
+
+                st.subheader("Sonuç")
+                res_col1, res_col2, res_col3 = st.columns(3)
+                res_col1.metric("Önerilen Satış Fiyatı (KDV Dahil)", f"{satis_fiyati_kdvli:,.2f} TL")
+                res_col2.metric("Gerçekleşen Net Kâr", f"{sonuclar['net_kar']:,.2f} TL")
+                res_col3.metric("Gerçekleşen Kâr Marjı", f"{sonuclar['kar_marji']:.2f}%")
 
         st.markdown('</div>', unsafe_allow_html=True)
 
-    if st.session_state.teklif_listesi:
-        with st.container():
-            st.markdown('<div class="card">', unsafe_allow_html=True)
-            st.subheader("Fiyatlandırma ve Teklif Detayları")
-            
-            df_teklif = pd.DataFrame(st.session_state.teklif_listesi)
-            
-            kar_marji = st.slider("Uygulanacak Kâr Marjı (%)", 0.0, 200.0, 50.0)
-            
-            df_teklif['Birim Satış Fiyatı (KDV Hariç)'] = df_teklif['Birim Maliyet'] / (1 - (kar_marji / 100))
-            df_teklif['Toplam Fiyat (KDV Hariç)'] = df_teklif['Birim Satış Fiyatı (KDV Hariç)'] * df_teklif['Adet']
-            
-            st.dataframe(df_teklif)
-            
-            toplam_teklif_tutari = df_teklif['Toplam Fiyat (KDV Hariç)'].sum()
-            st.metric("Teklif Ara Toplam (KDV Hariç)", f"{toplam_teklif_tutari:,.2f} TL")
+def render_satis_fiyati_hesaplayici():
+    st.title("🏷️ Satış Fiyatı Hesaplayıcı")
+    left_col, right_col = st.columns([2, 3])
+    with left_col:
+        st.markdown('<div class="card">', unsafe_allow_html=True)
+        st.subheader("⚙️ Varsayılan Maliyetler")
+        # --- GÜNCELLENDİ: Komisyon oranı buradan kaldırıldı ---
+        if 'tekil_kdv' not in st.session_state: st.session_state.tekil_kdv = 10.0
+        if 'tekil_kargo' not in st.session_state: st.session_state.tekil_kargo = 80.0
+        if 'tekil_reklam' not in st.session_state: st.session_state.tekil_reklam = 0.0
+        st.session_state.tekil_kdv = st.number_input("KDV Oranı (%)", min_value=0.0, value=st.session_state.tekil_kdv, key='s_kdv')
+        st.session_state.tekil_kargo = st.number_input("Kargo Gideri (TL)", min_value=0.0, value=st.session_state.tekil_kargo, key='s_kar')
+        st.session_state.tekil_reklam = st.number_input("Reklam Gideri (TL)", min_value=0.0, value=st.session_state.tekil_reklam, key='s_rek')
+        st.markdown('</div>', unsafe_allow_html=True)
+    with right_col:
+        st.markdown('<div class="card">', unsafe_allow_html=True)
+        st.subheader("📦 Ürün Arama ve Simülasyon")
+        df_maliyet = load_cost_data()
 
-            if st.button("🗑️ Teklif Listesini Temizle"):
-                st.session_state.teklif_listesi = []
-                st.rerun()
-
-            # Excel'e aktarma
-            output = io.BytesIO()
-            with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-                df_teklif.to_excel(writer, index=False, sheet_name='Toptan_Teklif')
-                writer.close()
+        # --- YENİ: Form kullanarak Enter tuşuyla gönderme özelliğini etkinleştirme ---
+        with st.form(key="arama_ve_hesaplama_formu"):
+            arama_terimi = st.text_input("Model Kodu ile Ürün Ara", "")
             
-            st.download_button(
-                label="✅ Fiyat Listesini Excel Olarak İndir",
-                data=output.getvalue(),
-                file_name='Toptan_Fiyat_Teklifi.xlsx'
+            secilen_urun_detay = None
+            secilen_model_kodu = None
+
+            if arama_terimi:
+                df_maliyet['Model Kodu'] = df_maliyet['Model Kodu'].astype(str)
+                sonuclar = df_maliyet[df_maliyet['Model Kodu'].str.contains(arama_terimi, case=False, na=False)]
+                
+                if not sonuclar.empty:
+                    secenekler = sonuclar['Model Kodu'].unique()
+                    
+                    if len(secenekler) == 1:
+                        secilen_model_kodu = secenekler[0]
+                        st.selectbox("Bulunan Modeller", options=secenekler, index=0, disabled=True)
+                    else:
+                        secilen_model_kodu = st.selectbox(
+                            "Bulunan Modeller", 
+                            options=secenekler,
+                            index=None,
+                            placeholder="Lütfen bir model seçin..."
+                        )
+                    
+                    if secilen_model_kodu:
+                        secilen_urun_detay = sonuclar[sonuclar['Model Kodu'] == secilen_model_kodu].iloc[0].to_dict()
+                else:
+                    st.warning("Aradığınız kriterlere uygun ürün bulunamadı.")
+
+            if secilen_urun_detay:
+                urun = secilen_urun_detay
+                st.success(f"Seçilen ürünün maliyeti (KDV Hariç): {urun['Alış Fiyatı']:,.2f} TL")
+                satis_fiyati_kdvli = st.number_input(f"Satış Fiyatı (KDV Dahil) - Seçilen: {urun['Model Kodu']}", min_value=0.0, format="%.2f", key="satis_fiyati_input")
+                
+                # --- GÜNCELLENDİ: Komisyon oranı buraya taşındı ---
+                if 'tekil_komisyon' not in st.session_state: st.session_state.tekil_komisyon = 21.5
+                st.session_state.tekil_komisyon = st.number_input("Komisyon Oranı (%)", min_value=0.0, value=st.session_state.tekil_komisyon, key='s_kom')
+            
+            hesapla_butonu = st.form_submit_button("Hesapla", type="primary")
+
+        if hesapla_butonu and 'satis_fiyati_kdvli' in locals() and satis_fiyati_kdvli > 0:
+            kdv_orani = st.session_state.get('tekil_kdv', 10.0)
+            komisyon_orani = st.session_state.get('tekil_komisyon', 21.5)
+            kargo_gideri = st.session_state.get('tekil_kargo', 80.0)
+            reklam_gideri = st.session_state.get('tekil_reklam', 0.0)
+            urun_maliyeti = secilen_urun_detay['Alış Fiyatı']
+
+            sonuclar = kar_hesapla(
+                satis_fiyati_kdvli, urun_maliyeti, komisyon_orani, 
+                kdv_orani, kargo_gideri, reklam_gideri
             )
-            st.markdown('</div>', unsafe_allow_html=True)
+            
+            st.subheader("Sonuç")
+            res_col1, res_col2, res_col3 = st.columns(3)
+            res_col1.metric("Net Kâr (TL)", f"{sonuclar['net_kar']:,.2f} TL")
+            res_col2.metric("Kâr Marjı (%)", f"{sonuclar['kar_marji']:.2f}%")
+            res_col3.metric("Net Maliyet (TL)", f"{sonuclar['toplam_maliyet']:,.2f} TL")
+
+        st.markdown('</div>', unsafe_allow_html=True)
 
 # --- YENİ VE EXCEL İLE UYUMLU SİHİRBAZ FONKSİYONU ---
 def render_yeni_urun_sihirbazi():
