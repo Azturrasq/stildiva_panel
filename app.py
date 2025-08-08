@@ -669,7 +669,7 @@ if st.session_state["authentication_status"]:
         "Toptan Fiyat Teklifi": render_toptan_fiyat_teklifi,
         "Aylık Hedef Analizi": render_hedef_analizi,
         "Maliyet Yönetimi": render_maliyet_yonetimi,
-        "🧙‍♂️ Yeni Ürün Sihirbazi": render_yeni_urun_sihirbazi
+        "🧙‍♂️ Yeni Ürün Sihirbazı": render_yeni_urun_sihirbazi
     }
     page_map[app_mode]()
 
