@@ -1,14 +1,21 @@
 # filepath: /Users/canberkaslan/Desktop/KarlilikProjesi/.gitignore
-# Sanal ortam klasörü
+# Python sanal ortamları
+.venv
 venv/
 
-# Derleme çıktıları
-/dist
-/build
+# PyInstaller tarafından oluşturulan klasörler
+/build/
+/dist/
 
-# Python cache
+# Python cache dosyaları
 __pycache__/
 *.pyc
+
+# Log dosyaları
+*.log
+
+# VS Code ayarları
+.vscode/
 
 # Google Cloud kimlik bilgileri (ÇOK ÖNEMLİ)
 secrets.toml
