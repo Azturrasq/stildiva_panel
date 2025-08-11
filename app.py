@@ -178,10 +178,21 @@ def run_and_display_analysis():
         df_maliyet = st.session_state.df_maliyet
         params = st.session_state.analiz_params
 
-        # Kapsamlı Barkod Temizliği
-        df_siparis['Barkod'] = df_siparis['Barkod'].astype(str).str.replace(r'\.0$', '', regex=True).str.strip()
-        df_maliyet['Barkod'] = df_maliyet['Barkod'].astype(str).str.replace(r'\.0$', '', regex=True).str.strip()
+        # --- KESİN ÇÖZÜM: Kapsamlı Barkod Temizliği ---
+        # Farklı kaynaklardan gelen (Excel ve Google Sheets) barkod formatlarını
+        # birleştirmeden önce standart hale getiriyoruz.
+        
+        # 1. Sipariş DataFrame'ini (Excel'den gelen) temizle
+        df_siparis['Barkod'] = df_siparis['Barkod'].astype(str) # Önce metne çevir
+        df_siparis['Barkod'] = df_siparis['Barkod'].str.replace(r'\.0$', '', regex=True) # Sonundaki ".0" uzantısını kaldır
+        df_siparis['Barkod'] = df_siparis['Barkod'].str.strip() # Olası boşlukları temizle
 
+        # 2. Maliyet DataFrame'ini (Google Sheets'ten gelen) temizle
+        df_maliyet['Barkod'] = df_maliyet['Barkod'].astype(str)
+        df_maliyet['Barkod'] = df_maliyet['Barkod'].str.replace(r'\.0$', '', regex=True)
+        df_maliyet['Barkod'] = df_maliyet['Barkod'].str.strip()
+
+        # Artık formatları eşit olan tabloları birleştir
         df_merged = pd.merge(df_siparis, df_maliyet, on="Barkod", how="left")
         df_maliyetli = df_merged[df_merged['Alış Fiyatı'].notna()].copy()
         df_maliyetsiz = df_merged[df_merged['Alış Fiyatı'].isna()].copy()
@@ -223,16 +234,15 @@ def run_and_display_analysis():
 
         st.session_state.toplam_analiz_kari = toplam_analiz_kari
 
-        # --- KESİN ÇÖZÜM: Tab mantığı kaldırıldı, her şey sıralı gösterilecek ---
-        
-        # 1. Her durumda ana analiz sonuçlarını göster
-        display_summary_and_details(df_siparis, df_grouped, toplam_analiz_kari, urun_basi_kargo_maliyeti)
-
-        # 2. Eğer eksik maliyet varsa, UYARIYI ve EKSİK MALİYET GİRİŞ TABLOSUNU en altta göster
         if not df_maliyetsiz.empty:
-            st.warning(f"**DİKKAT:** Seçtiğiniz filtredeki **{len(df_maliyetsiz)}** satır ürünün maliyet bilgisi bulunamadı. Aşağıdaki tablodan bu verileri tamamlayabilirsiniz.")
-            render_eksik_maliyet_tab(df_maliyetsiz)
-
+            st.warning(f"**DİKKAT:** Seçtiğiniz filtredeki **{len(df_maliyetsiz)}** satır ürünün maliyet bilgisi bulunamadı. Aşağıdaki 'Eksik Maliyetleri Gir' sekmesinden bu verileri tamamlayabilirsiniz.")
+            tab1, tab2 = st.tabs(["Genel Analiz", "⚠️ Eksik Maliyetleri Gir"])
+            with tab1:
+                display_summary_and_details(df_siparis, df_grouped, toplam_analiz_kari, urun_basi_kargo_maliyeti)
+            with tab2:
+                render_eksik_maliyet_tab(df_maliyetsiz)
+        else:
+            display_summary_and_details(df_siparis, df_grouped, toplam_analiz_kari, urun_basi_kargo_maliyeti)
     except Exception as e:
         st.error(f"Analiz sırasında bir hata oluştu: {e}")
 
@@ -278,14 +288,16 @@ def display_summary_and_details(df_siparis, df_grouped, toplam_analiz_kari, urun
             st.dataframe(df_platform.sort_values('Ciro', ascending=False).style.format({'Ciro': '{:,.2f} TL'}), use_container_width=True)
         st.markdown('</div>', unsafe_allow_html=True)
 
-    # --- GÜNCELLENMİŞ BÖLÜM: GÜNLÜK CİRO DÖKÜMÜ ---
+    # --- YENİ EKLENEN BÖLÜM: GÜNLÜK CİRO DÖKÜMÜ ---
     with st.container():
         st.markdown('<div class="card">', unsafe_allow_html=True)
         st.subheader("📅 Günlük Ciro Dağılımı (Platform Bazında)")
 
+        # 1. Her satır için ciro hesapla
         df_daily = df_siparis.copy()
         df_daily['Gunluk_Ciro'] = df_daily['Tutar'] * df_daily['Miktar']
         
+        # 2. Veriyi tarihe göre gruplayıp platformları sütunlara çevir (pivot)
         daily_summary = df_daily.pivot_table(
             index=df_daily['Sipariş Tarihi'].dt.date,
             columns='Platform',
@@ -294,23 +306,11 @@ def display_summary_and_details(df_siparis, df_grouped, toplam_analiz_kari, urun
             fill_value=0
         )
         
-        # 1. İstenen sıralamayı tanımla
-        platform_order = ['Trendyol', 'LCW', 'Shopify', 'WhatsApp', 'Instagram']
-        
-        # 2. Mevcut veride olan ve sıralamada istenen sütunları bul
-        ordered_columns = [col for col in platform_order if col in daily_summary.columns]
-        
-        # 3. Mevcut veride olan ama sıralamada olmayan diğer sütunları bul (varsa)
-        other_columns = [col for col in daily_summary.columns if col not in ordered_columns]
-        
-        # 4. Nihai sıralamayı oluştur ve DataFrame'i yeniden sırala
-        final_order = ordered_columns + other_columns
-        daily_summary = daily_summary[final_order]
-
-        # 5. Toplam Ciro sütununu en sağa ekle
-        daily_summary['Toplam Ciro'] = daily_summary.sum(axis=1)
-        
+        # 3. Tabloyu daha okunaklı hale getir
         daily_summary.index.name = 'Tarih'
+        daily_summary.columns = [f"{col} Ciro" for col in daily_summary.columns]
+        
+        # 4. Formatlanmış tabloyu ekrana yazdır
         st.dataframe(
             daily_summary.style.format('{:,.2f} TL'),
             use_container_width=True
@@ -740,37 +740,44 @@ authenticator.login(location='main')
 
 # 2. Giriş durumunu st.session_state üzerinden kontrol et.
 if st.session_state["authentication_status"]:
-    # --- ANA UYGULAMA AKIŞI (DÜZELTİLDİ) ---
+    # --- ANA UYGULAMA AKIŞI ---
     with st.sidebar:
+        # Logo ve diğer bileşenler buraya gelecek
         try:
             st.image("logo.png", width=200)
         except Exception as e:
-            st.error("Logo yüklenemedi.")
-        
+            st.warning("logo.png dosyası bulunamadı.")
+
+        # Hoşgeldin mesajı ve çıkış butonu
         st.write(f'Hoşgeldin *{st.session_state["name"]}*')
         authenticator.logout('Çıkış Yap', 'main')
-
         st.markdown("---")
+
+        # Sihirbazlar bölümü
         st.subheader("Sihirbazlar")
-        
-        # Sayfa haritası
-        page_map = {
-            "Kârlılık Analizi": render_karlilik_analizi,
-            "Maliyet Yönetimi": render_maliyet_yonetimi,
-            "Aylık Hedef Analizi": render_hedef_analizi,
-            "Toptan Fiyat Teklifi": render_toptan_fiyat_teklifi,
-            "Yeni Ürün Sihirbazı": render_yeni_urun_sihirbazi,
-            "Kampanya Fiyatı": render_kampanya_fiyati
-        }
-        
-        # TEK VE DOĞRU MENÜ BURADA
         app_mode = st.selectbox(
             "Hangi aracı kullanmak istersiniz?",
-            page_map.keys(),
+            ["Kârlılık Analizi", "Maliyet Yönetimi", "Aylık Hedef Analizi", "Toptan Fiyat Teklifi", "Yeni Ürün Sihirbazı", "Kampanya Fiyatı"],
             label_visibility="collapsed"
         )
 
-    # Seçilen sayfayı çalıştır
+    # --- HATA DÜZELTME: Olmayan CSS fonksiyonu çağrısı kaldırıldı ---
+    page_map = {
+        "Kârlılık Analizi": render_karlilik_analizi,
+        "Maliyet Yönetimi": render_maliyet_yonetimi,
+        "Aylık Hedef Analizi": render_hedef_analizi,
+        "Toptan Fiyat Teklifi": render_toptan_fiyat_teklifi,
+        "Yeni Ürün Sihirbazı": render_yeni_urun_sihirbazi, # EMOJİLER KALDIRILDI VE DOĞRU FONKSİYON ADI KULLANILDI
+        "Kampanya Fiyatı": render_kampanya_fiyati # EMOJİLER KALDIRILDI VE DOĞRU FONKSİYON ADI KULLANILDI
+    }
+    
+    # Menüdeki seçeneği de düzeltiyoruz
+    app_mode = st.selectbox(
+        "Hangi aracı kullanmak istersiniz?",
+        ["Kârlılık Analizi", "Maliyet Yönetimi", "Aylık Hedef Analizi", "Toptan Fiyat Teklifi", "Yeni Ürün Sihirbazı", "Kampanya Fiyatı"],
+        label_visibility="collapsed"
+    )
+
     page_map[app_mode]()
 
 elif st.session_state["authentication_status"] is False:
@@ -837,9 +844,9 @@ def yeni_urun_sihirbazi():
             st.write(f"**Net Kâr:** {net_kar:.2f} TL")
             
             # Komisyon
-            tekil_komisyon = st.session_state.get('tekil_komisyon', 21.5)
-            komisyon_tutari = alis_fiyati * (tekil_komisyon / 100)
-            st.write(f"**Komisyon (%{tekil_komisyon}):** {komisyon_tutari:.2f} TL")
+            komisyon = st.session_state.get('tekil_komisyon', 21.5)
+            komisyon_tutari = alis_fiyati * (komisyon / 100)
+            st.write(f"**Komisyon (%{komisyon}):** {komisyon_tutari:.2f} TL")
             
             # Nihai Kâr
             nihai_kar = net_kar - komisyon_tutari
