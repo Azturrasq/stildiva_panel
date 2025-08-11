@@ -247,6 +247,7 @@ def run_and_display_analysis():
         st.error(f"Analiz sırasında bir hata oluştu: {e}")
 
 def display_summary_and_details(df_siparis, df_grouped, toplam_analiz_kari, urun_basi_kargo_maliyeti):
+    # --- Mevcut Özet Kartları (Değişiklik Yok) ---
     with st.container():
         st.markdown('<div class="card">', unsafe_allow_html=True)
         st.subheader("📦 Sipariş Özeti (Filtrelenmiş Veri)")
@@ -287,6 +288,36 @@ def display_summary_and_details(df_siparis, df_grouped, toplam_analiz_kari, urun
             st.dataframe(df_platform.sort_values('Ciro', ascending=False).style.format({'Ciro': '{:,.2f} TL'}), use_container_width=True)
         st.markdown('</div>', unsafe_allow_html=True)
 
+    # --- YENİ EKLENEN BÖLÜM: GÜNLÜK CİRO DÖKÜMÜ ---
+    with st.container():
+        st.markdown('<div class="card">', unsafe_allow_html=True)
+        st.subheader("📅 Günlük Ciro Dağılımı (Platform Bazında)")
+
+        # 1. Her satır için ciro hesapla
+        df_daily = df_siparis.copy()
+        df_daily['Gunluk_Ciro'] = df_daily['Tutar'] * df_daily['Miktar']
+        
+        # 2. Veriyi tarihe göre gruplayıp platformları sütunlara çevir (pivot)
+        daily_summary = df_daily.pivot_table(
+            index=df_daily['Sipariş Tarihi'].dt.date,
+            columns='Platform',
+            values='Gunluk_Ciro',
+            aggfunc='sum',
+            fill_value=0
+        )
+        
+        # 3. Tabloyu daha okunaklı hale getir
+        daily_summary.index.name = 'Tarih'
+        daily_summary.columns = [f"{col} Ciro" for col in daily_summary.columns]
+        
+        # 4. Formatlanmış tabloyu ekrana yazdır
+        st.dataframe(
+            daily_summary.style.format('{:,.2f} TL'),
+            use_container_width=True
+        )
+        st.markdown('</div>', unsafe_allow_html=True)
+    
+    # --- Mevcut Detaylı Analiz (Değişiklik Yok) ---
     with st.container():
         st.markdown('<div class="card">', unsafe_allow_html=True)
         st.subheader("📋 Model Bazında Detaylı Analiz (Maliyeti Bilinenler)")
