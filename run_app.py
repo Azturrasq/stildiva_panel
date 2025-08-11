@@ -38,4 +38,5 @@ if __name__ == '__main__':
         height=800,
         resizable=True
     )
-    webview.start()
+    # macOS dosya seçici çökmesini engellemek için debug=True eklendi
+    webview.start(debug=True)

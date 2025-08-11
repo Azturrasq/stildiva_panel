@@ -740,44 +740,37 @@ authenticator.login(location='main')
 
 # 2. Giriş durumunu st.session_state üzerinden kontrol et.
 if st.session_state["authentication_status"]:
-    # --- ANA UYGULAMA AKIŞI ---
+    # --- ANA UYGULAMA AKIŞI (DÜZELTİLDİ) ---
     with st.sidebar:
-        # Logo ve diğer bileşenler buraya gelecek
         try:
             st.image("logo.png", width=200)
         except Exception as e:
-            st.warning("logo.png dosyası bulunamadı.")
-
-        # Hoşgeldin mesajı ve çıkış butonu
+            st.error("Logo yüklenemedi.")
+        
         st.write(f'Hoşgeldin *{st.session_state["name"]}*')
         authenticator.logout('Çıkış Yap', 'main')
-        st.markdown("---")
 
-        # Sihirbazlar bölümü
+        st.markdown("---")
         st.subheader("Sihirbazlar")
+        
+        # Sayfa haritası
+        page_map = {
+            "Kârlılık Analizi": render_karlilik_analizi,
+            "Maliyet Yönetimi": render_maliyet_yonetimi,
+            "Aylık Hedef Analizi": render_hedef_analizi,
+            "Toptan Fiyat Teklifi": render_toptan_fiyat_teklifi,
+            "Yeni Ürün Sihirbazı": render_yeni_urun_sihirbazi,
+            "Kampanya Fiyatı": render_kampanya_fiyati
+        }
+        
+        # TEK VE DOĞRU MENÜ BURADA
         app_mode = st.selectbox(
             "Hangi aracı kullanmak istersiniz?",
-            ["Kârlılık Analizi", "Maliyet Yönetimi", "Aylık Hedef Analizi", "Toptan Fiyat Teklifi", "Yeni Ürün Sihirbazı", "Kampanya Fiyatı"],
+            page_map.keys(),
             label_visibility="collapsed"
         )
 
-    # --- HATA DÜZELTME: Olmayan CSS fonksiyonu çağrısı kaldırıldı ---
-    page_map = {
-        "Kârlılık Analizi": render_karlilik_analizi,
-        "Maliyet Yönetimi": render_maliyet_yonetimi,
-        "Aylık Hedef Analizi": render_hedef_analizi,
-        "Toptan Fiyat Teklifi": render_toptan_fiyat_teklifi,
-        "Yeni Ürün Sihirbazı": render_yeni_urun_sihirbazi, # EMOJİLER KALDIRILDI VE DOĞRU FONKSİYON ADI KULLANILDI
-        "Kampanya Fiyatı": render_kampanya_fiyati # EMOJİLER KALDIRILDI VE DOĞRU FONKSİYON ADI KULLANILDI
-    }
-    
-    # Menüdeki seçeneği de düzeltiyoruz
-    app_mode = st.selectbox(
-        "Hangi aracı kullanmak istersiniz?",
-        ["Kârlılık Analizi", "Maliyet Yönetimi", "Aylık Hedef Analizi", "Toptan Fiyat Teklifi", "Yeni Ürün Sihirbazı", "Kampanya Fiyatı"],
-        label_visibility="collapsed"
-    )
-
+    # Seçilen sayfayı çalıştır
     page_map[app_mode]()
 
 elif st.session_state["authentication_status"] is False:
