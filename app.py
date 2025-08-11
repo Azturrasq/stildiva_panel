@@ -288,16 +288,14 @@ def display_summary_and_details(df_siparis, df_grouped, toplam_analiz_kari, urun
             st.dataframe(df_platform.sort_values('Ciro', ascending=False).style.format({'Ciro': '{:,.2f} TL'}), use_container_width=True)
         st.markdown('</div>', unsafe_allow_html=True)
 
-    # --- YENİ EKLENEN BÖLÜM: GÜNLÜK CİRO DÖKÜMÜ ---
+    # --- GÜNCELLENMİŞ BÖLÜM: GÜNLÜK CİRO DÖKÜMÜ ---
     with st.container():
         st.markdown('<div class="card">', unsafe_allow_html=True)
         st.subheader("📅 Günlük Ciro Dağılımı (Platform Bazında)")
 
-        # 1. Her satır için ciro hesapla
         df_daily = df_siparis.copy()
         df_daily['Gunluk_Ciro'] = df_daily['Tutar'] * df_daily['Miktar']
         
-        # 2. Veriyi tarihe göre gruplayıp platformları sütunlara çevir (pivot)
         daily_summary = df_daily.pivot_table(
             index=df_daily['Sipariş Tarihi'].dt.date,
             columns='Platform',
@@ -306,11 +304,23 @@ def display_summary_and_details(df_siparis, df_grouped, toplam_analiz_kari, urun
             fill_value=0
         )
         
-        # 3. Tabloyu daha okunaklı hale getir
-        daily_summary.index.name = 'Tarih'
-        daily_summary.columns = [f"{col} Ciro" for col in daily_summary.columns]
+        # 1. İstenen sıralamayı tanımla
+        platform_order = ['Trendyol', 'LCW', 'Shopify', 'WhatsApp', 'Instagram']
         
-        # 4. Formatlanmış tabloyu ekrana yazdır
+        # 2. Mevcut veride olan ve sıralamada istenen sütunları bul
+        ordered_columns = [col for col in platform_order if col in daily_summary.columns]
+        
+        # 3. Mevcut veride olan ama sıralamada olmayan diğer sütunları bul (varsa)
+        other_columns = [col for col in daily_summary.columns if col not in ordered_columns]
+        
+        # 4. Nihai sıralamayı oluştur ve DataFrame'i yeniden sırala
+        final_order = ordered_columns + other_columns
+        daily_summary = daily_summary[final_order]
+
+        # 5. Toplam Ciro sütununu en sağa ekle
+        daily_summary['Toplam Ciro'] = daily_summary.sum(axis=1)
+        
+        daily_summary.index.name = 'Tarih'
         st.dataframe(
             daily_summary.style.format('{:,.2f} TL'),
             use_container_width=True
@@ -837,9 +847,9 @@ def yeni_urun_sihirbazi():
             st.write(f"**Net Kâr:** {net_kar:.2f} TL")
             
             # Komisyon
-            komisyon = st.session_state.get('tekil_komisyon', 21.5)
-            komisyon_tutari = alis_fiyati * (komisyon / 100)
-            st.write(f"**Komisyon (%{komisyon}):** {komisyon_tutari:.2f} TL")
+            tekil_komisyon = st.session_state.get('tekil_komisyon', 21.5)
+            komisyon_tutari = alis_fiyati * (tekil_komisyon / 100)
+            st.write(f"**Komisyon (%{tekil_komisyon}):** {komisyon_tutari:.2f} TL")
             
             # Nihai Kâr
             nihai_kar = net_kar - komisyon_tutari
