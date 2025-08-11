@@ -441,7 +441,7 @@ def render_hedef_analizi():
                     st.info(f"Hedefe ulaşmak için günlük kârınızı **%{((gereken_gunluk_kar / gunluk_ortalama_kar) - 1) * 100 if gereken_gunluk_kar > 0 else -100:.1f}** artırmanız gerekmektedir.")
         st.markdown('</div>', unsafe_allow_html=True)
 
-# --- ESKİ SATIŞ FİYATI HESAPLAYICI FONKSİYONU SİLİNDİ ---
+# --- ESKİ SATIŞ FİYATI HESAPLAYERİ FONKSİYONU SİLİNDİ ---
 
 
 # --- SİLİNEN VE BOZUK OLAN TOPTAN FİYAT TEKLİFİ FONKSİYONU BURAYA DOĞRU ŞEKİLDE EKLENİYOR ---
@@ -757,19 +757,27 @@ if st.session_state["authentication_status"]:
         st.subheader("Sihirbazlar")
         app_mode = st.selectbox(
             "Hangi aracı kullanmak istersiniz?",
-            ["Kârlılık Analizi", "Maliyet Yönetimi", "Aylık Hedef Analizi", "Toptan Fiyat Teklifi", "🧙‍♂️ Yeni Ürün Sihirbazı", "🏷️ Kampanya Fiyatı"],
+            ["Kârlılık Analizi", "Maliyet Yönetimi", "Aylık Hedef Analizi", "Toptan Fiyat Teklifi", "Yeni Ürün Sihirbazı", "Kampanya Fiyatı"],
             label_visibility="collapsed"
         )
 
     # --- HATA DÜZELTME: Olmayan CSS fonksiyonu çağrısı kaldırıldı ---
     page_map = {
         "Kârlılık Analizi": render_karlilik_analizi,
-        "Toptan Fiyat Teklifi": render_toptan_fiyat_teklifi,
-        "Aylık Hedef Analizi": render_hedef_analizi,
         "Maliyet Yönetimi": render_maliyet_yonetimi,
-        "🧙‍♂️ Yeni Ürün Sihirbazı": render_yeni_urun_sihirbazi,
-        "🏷️ Kampanya Fiyatı": render_kampanya_fiyati
+        "Aylık Hedef Analizi": render_hedef_analizi,
+        "Toptan Fiyat Teklifi": render_toptan_fiyat_teklifi,
+        "Yeni Ürün Sihirbazı": render_yeni_urun_sihirbazi, # EMOJİLER KALDIRILDI VE DOĞRU FONKSİYON ADI KULLANILDI
+        "Kampanya Fiyatı": render_kampanya_fiyati # EMOJİLER KALDIRILDI VE DOĞRU FONKSİYON ADI KULLANILDI
     }
+    
+    # Menüdeki seçeneği de düzeltiyoruz
+    app_mode = st.selectbox(
+        "Hangi aracı kullanmak istersiniz?",
+        ["Kârlılık Analizi", "Maliyet Yönetimi", "Aylık Hedef Analizi", "Toptan Fiyat Teklifi", "Yeni Ürün Sihirbazı", "Kampanya Fiyatı"],
+        label_visibility="collapsed"
+    )
+
     page_map[app_mode]()
 
 elif st.session_state["authentication_status"] is False:
