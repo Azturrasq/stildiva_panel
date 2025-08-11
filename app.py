@@ -449,7 +449,6 @@ def render_toptan_fiyat_teklifi():
     st.title("📑 Toplu Fiyat Listesi Oluşturucu")
     st.info("Bu araç, Google Sheets'teki tüm ürünleriniz için belirlediğiniz hedeflere göre toplu bir satış fiyatı listesi oluşturur.")
 
-    # 1. Maliyet verilerini yükle
     load_cost_data()
     df_maliyet = st.session_state.df_maliyet.copy()
 
@@ -475,7 +474,6 @@ def render_toptan_fiyat_teklifi():
                 hedef_deger = st.number_input("Hedef Net Kâr (TL)", min_value=0.0, value=100.0, step=1.0, key="toptan_hedef_deger_tutar")
 
         if st.button("Fiyat Listesini Oluştur", type="primary", use_container_width=True):
-            # --- DÜZELTME: Sadece benzersiz model kodları ile çalış ---
             df_hesaplama = df_maliyet.drop_duplicates(subset=['Model Kodu']).copy()
 
             kdv_carpan = urun_kdv_orani / 100
@@ -488,7 +486,7 @@ def render_toptan_fiyat_teklifi():
                 hedef_kar_marji = hedef_deger / 100
                 pay = alis_fiyati_kdvsiz - alis_kdv_tutari
                 payda = 1 - hedef_kar_marji - (kdv_bolen * (komisyon_orani/100)) - kdv_carpan
-            else: # Hedef Net Kâr (TL)
+            else:
                 hedef_net_kar = hedef_deger
                 pay = alis_fiyati_kdvsiz - alis_kdv_tutari + hedef_net_kar
                 payda = 1 - (kdv_bolen * (komisyon_orani / 100)) - kdv_carpan
@@ -528,6 +526,27 @@ def render_toptan_fiyat_teklifi():
                         'Kar Marjı': '{:.2f}%'
                     }),
                     use_container_width=True
+                )
+
+                # --- YENİ: Excel olarak indirme butonu ---
+                # Not: Bu özelliğin çalışması için 'openpyxl' kütüphanesi gerekir.
+                # Terminalde 'pip install openpyxl' komutu ile kurabilirsiniz.
+                @st.cache_data
+                def convert_df_to_excel(df):
+                    output = io.BytesIO()
+                    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+                        df.to_excel(writer, index=False, sheet_name='FiyatListesi')
+                    processed_data = output.getvalue()
+                    return processed_data
+
+                excel_data = convert_df_to_excel(df_sonuc)
+                
+                st.download_button(
+                    label="📥 Fiyat Listesini Excel Olarak İndir",
+                    data=excel_data,
+                    file_name='fiyat_listesi.xlsx',
+                    mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                    key='toptan_fiyat_indir'
                 )
         st.markdown('</div>', unsafe_allow_html=True)
 
